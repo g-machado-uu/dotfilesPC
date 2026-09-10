@@ -1,0 +1,132 @@
+# Packages the rice needs, for an AUR helper:
+#   paru -S --needed $(grep -v '^#' packages-arch.txt)
+# Based on ML4W 2.14.1's Arch lists, minus waybar, nwg-dock-hyprland and
+# hyprpaper, plus what this rice adds. Every name checked with
+# pacman -Si / paru -Si on this PC (Arch, 2026-09-10). AUR ones are marked.
+# Everything else installed on this PC is in packages-arch-apps.txt.
+
+# Hyprland and the hypr tools
+hyprland
+hyprlock
+hypridle
+hyprpicker
+hyprsunset
+hyprshutdown
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+uwsm
+# AUR: writes hypr/hyprland-gui.lua (monitors, gaps, input)
+hyprmod
+
+# Shell, bar, notifications, launcher, wallpaper, colours
+quickshell
+swaync
+rofi
+awww
+matugen
+cliphist
+wl-clipboard
+libnotify
+# AUR: Firefox colours from matugen
+python-pywalfox
+
+# Qt and GTK
+qt5-wayland
+qt6-wayland
+qt6-svg
+qt6-virtualkeyboard
+qt6-multimedia-ffmpeg
+qt6ct
+nwg-look
+nwg-displays
+gnome-themes-extra
+breeze
+polkit-gnome
+gnome-keyring
+
+# Screenshots and text extraction
+grim
+slurp
+# AUR
+grimblast-git
+tesseract
+tesseract-data-eng
+imagemagick
+
+# System tools the bar and scripts call
+brightnessctl
+pavucontrol
+blueman
+network-manager-applet
+nm-connection-editor
+power-profiles-daemon
+pacman-contrib
+udiskie
+udisks2
+gvfs
+gvfs-mtp
+tumbler
+inotify-tools
+jq
+gum
+xclip
+libsecret
+
+# Dictation (SUPER+CTRL+M push-to-talk); AUR
+voxtype-bin
+wtype
+
+# Terminal and shell
+kitty
+zsh
+fzf
+zoxide
+eza
+yazi
+tmux
+neovim
+vim
+# AUR: nvr, which vimtex calls
+neovim-remote
+bat
+ripgrep
+fd
+lazygit
+fastfetch
+btop
+htop
+figlet
+# AUR
+oh-my-posh-bin
+
+# Apps
+nautilus
+gnome-text-editor
+loupe
+solaar
+flameshot
+
+# Fonts and themes
+ttf-0xproto-nerd
+ttf-firacode-nerd
+ttf-jetbrains-mono-nerd
+otf-font-awesome
+# AUR
+kora-icon-theme
+# AUR
+bibata-cursor-theme-bin
+
+# Tools
+stow
+git
+wget
+curl
+rsync
+unzip
+tar
+flatpak
+xdg-user-dirs
+python-pip
+python-gobject
+# AUR
+python-screeninfo

@@ -1,0 +1,35 @@
+[Added Associations]
+application/pdf=okularApplication_pdf.desktop;
+text/html=firefox-3.desktop;firefox-2.desktop;
+video/mp4=vlc.desktop;
+video/quicktime=vlc.desktop;
+image/jpeg=org.gnome.Loupe.desktop;
+image/png=org.gnome.Loupe.desktop;
+text/plain=nvim.desktop;
+application/vnd.oasis.opendocument.text=onlyoffice-desktopeditors.desktop;
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=onlyoffice-desktopeditors.desktop;
+application/vnd.openxmlformats-officedocument.presentationml.presentation=onlyoffice-desktopeditors.desktop;
+image/svg+xml=org.inkscape.Inkscape.desktop;
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=onlyoffice-desktopeditors.desktop;
+
+[Default Applications]
+application/pdf=okularApplication_pdf.desktop
+text/html=vivaldi-stable.desktop
+video/mp4=vlc.desktop
+video/quicktime=vlc.desktop
+x-scheme-handler/about=vivaldi-stable.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+x-scheme-handler/http=vivaldi-stable.desktop
+x-scheme-handler/https=vivaldi-stable.desktop
+x-scheme-handler/mailto=vivaldi-stable.desktop
+x-scheme-handler/rclone=rclone-ui-handler.desktop
+x-scheme-handler/unknown=vivaldi-stable.desktop
+image/jpeg=org.gnome.Loupe.desktop
+image/png=org.gnome.Loupe.desktop
+x-scheme-handler/claude=com.anthropic.Claude.desktop
+text/plain=nvim.desktop
+application/vnd.oasis.opendocument.text=onlyoffice-desktopeditors.desktop
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=onlyoffice-desktopeditors.desktop
+application/vnd.openxmlformats-officedocument.presentationml.presentation=onlyoffice-desktopeditors.desktop
+image/svg+xml=org.inkscape.Inkscape.desktop
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=onlyoffice-desktopeditors.desktop

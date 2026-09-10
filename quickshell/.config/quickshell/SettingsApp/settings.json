@@ -1,0 +1,221 @@
+[
+  {
+    "group": "Appearance",
+    "description": "Look and feel of rofi, the lock screen blur and the Hyprland variants.",
+    "settings": [
+      {
+        "name": "Rofi border size",
+        "file": "~/.config/ml4w/settings/rofi-border.rasi",
+        "type": "choose",
+        "mode": "replace",
+        "match": "border-width: .*px",
+        "default": "2",
+        "options": ["0", "1", "2", "3", "4", "5"]
+      },
+      {
+        "name": "Rofi font",
+        "file": "~/.config/ml4w/settings/rofi-font.rasi",
+        "type": "textfield",
+        "mode": "replace",
+        "match": "configuration { font: \".*\"; }",
+        "default": "Fira Sans 11"
+      },
+      {
+        "name": "Wallpaper blur",
+        "file": "~/.config/ml4w/settings/blur.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "50x30"
+      },
+      {
+        "name": "Animation",
+        "file": "~/.config/hypr/conf/animation.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/animations",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Decoration",
+        "file": "~/.config/hypr/conf/decoration.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/decorations",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Window",
+        "file": "~/.config/hypr/conf/window.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/windows",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Layout",
+        "file": "~/.config/hypr/conf/layout.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/layouts",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Workspace",
+        "file": "~/.config/hypr/conf/workspace.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/workspaces",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      }
+    ]
+  },
+  {
+    "group": "Default apps",
+    "description": "The command each keybinding and menu runs.",
+    "settings": [
+      {
+        "name": "Terminal",
+        "file": "~/.config/ml4w/settings/terminal.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "kitty"
+      },
+      {
+        "name": "Browser",
+        "file": "~/.config/ml4w/settings/browser.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "firefox"
+      },
+      {
+        "name": "Email client",
+        "file": "~/.config/ml4w/settings/email",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "evolution"
+      },
+      {
+        "name": "File manager",
+        "file": "~/.config/ml4w/settings/filemanager",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "nautilus --new-window"
+      },
+      {
+        "name": "Network manager",
+        "file": "~/.config/ml4w/settings/networkmanager.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "nmtui"
+      },
+      {
+        "name": "Bluetooth manager",
+        "file": "~/.config/ml4w/settings/bluetooth.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "blueman-manager"
+      },
+      {
+        "name": "Software manager",
+        "file": "~/.config/ml4w/settings/software.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": ""
+      },
+      {
+        "name": "Calculator",
+        "file": "~/.config/ml4w/settings/calculator.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "flatpak run org.gnome.Calculator"
+      },
+      {
+        "name": "Screenshot editor",
+        "file": "~/.config/ml4w/settings/screenshot-editor",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "pinta"
+      },
+      {
+        "name": "System monitor",
+        "file": "~/.config/ml4w/settings/systemmonitor",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "btop"
+      },
+      {
+        "name": "AUR helper",
+        "file": "~/.config/ml4w/settings/aur.sh",
+        "type": "textfield",
+        "mode": "overwrite",
+        "default": "yay",
+        "requires": "arch"
+      }
+    ]
+  },
+  {
+    "group": "System",
+    "description": "Core Hyprland variants.",
+    "settings": [
+      {
+        "name": "Keybindings",
+        "file": "~/.config/hypr/conf/keybinding.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/keybindings",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Monitor",
+        "file": "~/.config/hypr/conf/monitor.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/monitors",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Environment",
+        "file": "~/.config/hypr/conf/environment.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/environments",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      },
+      {
+        "name": "Window rules",
+        "file": "~/.config/hypr/conf/windowrule.lua",
+        "type": "files",
+        "folder": "~/.config/hypr/conf/windowrules",
+        "filetypes": ".lua",
+        "mode": "replace",
+        "match": "local name = \".*\"",
+        "default": "default.lua",
+        "post_command": "hyprctl reload"
+      }
+    ]
+  }
+]

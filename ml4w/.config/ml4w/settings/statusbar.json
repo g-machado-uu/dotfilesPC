@@ -1,0 +1,28 @@
+{
+  "bar": {
+    "enabled": true,
+    "alwaysExpanded": true
+  },
+  "modules": {
+    "left": [
+      "workspaces",
+      "terminal"
+    ],
+    "center": [
+      "media",
+      "launcher",
+      "clock",
+      "notifications"
+    ],
+    "right": [
+      "updates",
+      "battery",
+      "powerprofile",
+      "volume",
+      "systemtray",
+      "keyboard",
+      "clipboard",
+      "power"
+    ]
+  }
+}

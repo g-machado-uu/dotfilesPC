@@ -1,0 +1,23 @@
+# Runtime state that should not be tracked
+*.log
+*.bak
+*~
+.DS_Store
+
+# Caches that some of these tools drop into their config directories
+nvim/.netrwhist
+yazi/*.cache
+
+# Leftovers from editing the Quickshell bar
+*.bkp
+StatusbarApp.backup-*/
+
+# Written by the apps themselves (these packages are stowed --no-folding,
+# so this is only a safety net)
+tmux/.config/tmux/plugins/
+voxtype/.config/voxtype/*.bak
+
+# Outro
+
+NOTIFICATIONS.md
+CLAUDE.md

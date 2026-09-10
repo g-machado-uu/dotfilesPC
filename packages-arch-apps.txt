@@ -1,0 +1,229 @@
+# Everything else installed on this PC, beyond the rice (packages-arch.txt):
+#   paru -S --needed $(grep -v '^#' packages-arch-apps.txt)
+# Taken from `pacman -Qqe` on 2026-09-10. Skip sections you don't want on a
+# new machine (NVIDIA only fits NVIDIA cards, intel-ucode only Intel CPUs).
+# Not listed: paru itself (bootstrap it, see README) and the ML4W leftovers
+# waybar, hyprpaper, nwg-dock-hyprland and hyprsysteminfo.
+
+# Base system, boot, snapshots
+base
+base-devel
+linux
+linux-headers
+linux-firmware
+intel-ucode
+sof-firmware
+btrfs-progs
+dosfstools
+mtools
+ntfs-3g
+efibootmgr
+grub
+grub-btrfs
+os-prober
+zram-generator
+plymouth
+# AUR
+plymouth-theme-arch-breeze-git
+timeshift
+# AUR
+timeshift-autosnap
+sudo
+man-db
+man-pages
+nano
+inetutils
+reflector
+smartmontools
+sbctl
+cronie
+firewalld
+firewall-config
+sddm
+networkmanager
+wpa_supplicant
+bluez
+bluez-utils
+pipewire
+pipewire-alsa
+pipewire-jack
+pipewire-pulse
+wireplumber
+gst-plugin-pipewire
+libpulse
+xdg-utils
+xdg-user-dirs-gtk
+xorg-server
+xorg-xhost
+xorg-xinit
+
+# NVIDIA (open kernel modules)
+nvidia-open-dkms
+dkms
+libva-nvidia-driver
+
+# GNOME, the second session at the login screen (gdm is installed but not
+# enabled: SDDM is the display manager)
+gdm
+gnome-shell
+gnome-session
+gnome-settings-daemon
+gnome-control-center
+gnome-backgrounds
+gnome-menus
+gnome-tweaks
+gnome-software
+packagekit
+malcontent
+gnome-tour
+gnome-user-docs
+gnome-user-share
+gnome-remote-desktop
+gnome-color-manager
+gnome-connections
+gnome-console
+gnome-contacts
+gnome-calendar
+gnome-calculator
+gnome-characters
+gnome-clocks
+gnome-disk-utility
+gnome-font-viewer
+gnome-logs
+gnome-maps
+gnome-music
+gnome-system-monitor
+gnome-weather
+xdg-desktop-portal-gnome
+baobab
+decibels
+epiphany
+papers
+showtime
+simple-scan
+snapshot
+sushi
+tecla
+yelp
+orca
+rygel
+grilo-plugins
+dconf-editor
+gvfs-afc
+gvfs-dnssd
+gvfs-goa
+gvfs-gphoto2
+gvfs-nfs
+gvfs-onedrive
+gvfs-smb
+gvfs-wsdd
+
+# Printing
+cups
+cups-pdf
+cups-pk-helper
+system-config-printer
+# AUR
+epson-inkjet-printer-escpr
+
+# Development
+code
+go
+nodejs
+npm
+nvm
+jre17-openjdk
+python-pipx
+python-odfpy
+# AUR
+python312
+libxcrypt-compat
+docker
+docker-compose
+arm-none-eabi-gcc
+arm-none-eabi-gdb
+arm-none-eabi-newlib
+openocd
+stlink
+octave
+duf
+tree
+resvg
+sequoia-sq
+
+# Browsers
+firefox
+vivaldi
+vivaldi-ffmpeg-codecs
+
+# Office, documents, graphics
+libreoffice-fresh
+# AUR
+onlyoffice-bin
+okular
+rnote
+inkscape
+blender
+# AUR
+zotero-bin
+
+# Media
+obs-studio
+vlc
+vlc-plugins-all
+vlc-plugins-extra
+vlc-plugins-visualization
+# AUR
+vlc-pause-click-plugin
+spotify-launcher
+
+# Communication
+# AUR
+zoom
+# AUR
+teams-for-linux-bin
+# AUR
+elecwhat-bin
+# AUR
+electron40-bin
+# AUR
+claude-desktop
+
+# Files, sync, transfer
+qbittorrent
+rclone
+# AUR
+rclone-browser
+termscp
+# AUR
+dropbox
+# AUR
+localsend-bin
+# AUR
+nautilus-open-any-terminal
+
+# Windows apps
+wine
+wine-gecko
+wine-mono
+winetricks
+# AUR
+winegui
+# AUR
+winboat-bin
+# AUR
+ttf-ms-fonts
+
+# Hardware
+# AUR: Logitech device settings
+openlogi-bin
+
+# Servers and VPN
+cockpit
+samba
+# AUR
+plex-media-server
+# AUR
+nordvpn-bin
+# AUR
+nordvpn-gui

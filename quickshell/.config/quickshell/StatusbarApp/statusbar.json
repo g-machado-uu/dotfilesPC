@@ -1,0 +1,49 @@
+/*
+Default configuration file for the Quickshell Statusbar.
+*/
+{
+  "bar": {
+    "height": 36,
+    "reservedHeight": 36,
+    "enabled": false,
+    "alwaysExpanded": true
+  },
+  "pill": {
+    "collapsedWidth": 0,
+    "expandedWidth": 680,
+    "radius": 18,
+    "flareRadius": 18,
+    "animationDuration": 350
+  },
+  "modules": {
+    "left": ["workspaces", "terminal"],
+    "center": ["launcher", "clock", "swaync"],
+    "right": [
+      "updates",
+      "battery",
+      "powerprofile",
+      "volume",
+      "systemtray",
+      "keyboard",
+      "clipboard",
+      "power"
+    ]
+  },
+  "border": {
+    "width": 0,
+    "colorTop": "",
+    "colorBottom": ""
+  },
+  "opacity": {
+    "collapsed": 0.82,
+    "expanded": 0.9
+  },
+  "clock": {
+    "format": "HH:mm",
+    "dateFormat": "ddd, dd MMM"
+  },
+  "workspaces": {
+    "count": 5,
+    "showAppIcons": true
+  }
+}

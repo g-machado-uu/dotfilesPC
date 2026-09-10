@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Reload the Quickshell status bar.
+qs ipc call statusbar reload

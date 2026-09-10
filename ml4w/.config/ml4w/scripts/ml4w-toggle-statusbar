@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Toggle the Quickshell status bar.
+qs ipc call statusbar toggle
