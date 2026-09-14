@@ -31,6 +31,12 @@ Rectangle {
     property real panelFlare: 18
     property real panelRadius: 18
     property real panelOpacity: 0.9
+    // Distance from the bottom of this icon down to the bottom of the bar.
+    // The menu hangs off the icon, which is centred in a taller bar, so
+    // without this it would start a few pixels *inside* the bar and its flares
+    // would meet nothing. Handed down rather than measured here, because only
+    // the bar knows its own height.
+    property real panelGap: 0
 
     // The three selectable profiles, in ascending-power order. Performance is
     // dropped when the daemon does not expose it.
@@ -115,6 +121,8 @@ Rectangle {
         anchorItem: profileRoot
         open: profileRoot.menuOpen
         onDismissed: profileRoot.menuOpen = false
+
+        gap: profileRoot.panelGap
 
         panelWidth: 190
         // One 34px row per profile, 2px between them, inside 8 of padding.

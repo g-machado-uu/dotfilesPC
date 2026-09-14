@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import QtQuick.Effects
 import qs.CustomTheme
 
 // An animated weather glyph for a WMO weather code, drawn rather than loaded so
@@ -108,29 +109,58 @@ Item {
     }
 
     // ---- Moon: the night stand-in for the sun. ----
+    // The crescent is masked out of the disc rather than painted over with a
+    // second circle in the background colour: the desktop widget has no
+    // background to match, so an opaque bite would show as a dark blob sitting
+    // on the wallpaper.
     Item {
+        id: moon
         visible: icon.hasSun && icon.night
         width: sun.width
         height: sun.height
         x: sun.x
         y: sun.y
 
-        Rectangle {
+        // The full disc, drawn into a layer so it can be masked.
+        Item {
             id: moonDisc
-            anchors.centerIn: parent
-            width: parent.width * 0.8
-            height: width
-            radius: width / 2
-            color: icon.warm
+            anchors.fill: parent
+            visible: false
+            layer.enabled: true
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.8
+                height: width
+                radius: width / 2
+                color: icon.warm
+            }
         }
-        // Bitten out of the disc by a second circle in the panel's own colour.
-        Rectangle {
-            width: moonDisc.width
-            height: moonDisc.height
-            radius: width / 2
-            color: Theme.background
-            x: moonDisc.x + moonDisc.width * 0.3
-            y: moonDisc.y - moonDisc.height * 0.22
+
+        // The offset circle that gets taken out of it. Only its alpha matters.
+        Item {
+            id: moonBite
+            anchors.fill: parent
+            visible: false
+            layer.enabled: true
+
+            Rectangle {
+                width: moon.width * 0.8
+                height: width
+                radius: width / 2
+                color: "black"
+                x: moon.width * 0.1 + width * 0.3
+                y: moon.height * 0.1 - width * 0.22
+            }
+        }
+
+        MultiEffect {
+            anchors.fill: parent
+            source: moonDisc
+            maskEnabled: true
+            maskSource: moonBite
+            maskInverted: true
+            maskThresholdMin: 0.5
         }
     }
 

@@ -12,6 +12,23 @@ Item {
 
     // Set by the parent: when true the date is revealed next to the time.
     property bool expanded: false
+
+    // Set while the desktop widget is showing the time instead, which is when
+    // repeating it in the bar would be noise. The module folds itself away
+    // sideways rather than disappearing, so the neighbouring modules glide into
+    // the space instead of jumping into it.
+    property bool hidden: false
+
+    // 0 = fully shown, 1 = fully folded. The bar drives the module's layout
+    // margins off this too, so the gap around it closes in step with its width
+    // and the fold leaves no hole behind.
+    property real fold: hidden ? 1 : 0
+    Behavior on fold {
+        NumberAnimation { duration: 280; easing.type: Easing.OutQuint }
+    }
+
+    // Skipped by the bar's keyboard navigation once it is out of the way.
+    readonly property bool collapsed: fold > 0.99
     // Qt date/time format for the time, supplied from statusbar.json.
     property string timeFormat: "HH:mm"
     // Qt date/time format for the date shown beside the time when expanded.
@@ -30,8 +47,14 @@ Item {
     }
 
     // Matches the other modules' 30px touch target.
-    implicitWidth: row.implicitWidth
+    implicitWidth: row.implicitWidth * (1 - clockRoot.fold)
     implicitHeight: 30
+
+    // The row keeps its full width while the module shrinks around it, so the
+    // text slides out of view instead of being squeezed.
+    clip: true
+    opacity: 1 - clockRoot.fold
+    enabled: clockRoot.fold < 0.5
 
     // Live clock, only ticks once per minute.
     SystemClock {

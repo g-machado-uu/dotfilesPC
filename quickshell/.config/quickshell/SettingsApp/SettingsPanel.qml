@@ -7,7 +7,7 @@ import QtQuick.Controls
 import qs.CustomTheme
 
 // The settings that used to live in the separate ML4W Dotfiles Settings app,
-// as a panel that drops out of the status bar like the notification centre.
+// as a panel that drops out of the status bar like the control centre.
 //
 // This is only the content — the silhouette, translucency and drop animation
 // come from the BarPanel that hosts it.
@@ -15,6 +15,10 @@ import qs.CustomTheme
 // What is listed comes from settings.json next to this file. Every entry names
 // a file and how its value sits in it: "overwrite" means the whole file is the
 // value, "replace" means the value is the ".*" part of the "match" pattern.
+// A third mode, "command", owns no file at all: the value is read from
+// "read_command" and written by "write_command" with "%s" standing for the
+// (shell-quoted) value — for settings whose file belongs to another app, like
+// the status bar's own statusbar.json.
 // Entries with "requires": "arch" are only shown on Arch-based systems.
 Item {
     id: root
@@ -79,6 +83,12 @@ Item {
     // ------------------------------------------------------------------
     // READING AND WRITING VALUES
     // ------------------------------------------------------------------
+    // Single-quote a value for "command" settings, so a place name with a
+    // space or an apostrophe reaches the command in one piece.
+    function shellQuote(s: string): string {
+        return "'" + s.replace(/'/g, "'\\''") + "'"
+    }
+
     function escapeRegExp(s: string): string {
         return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     }
@@ -240,12 +250,15 @@ Item {
 
                 property string value: root.fallback(row.setting)
                 property bool fileMissing: false
+                // A "command" setting is read and written by running something,
+                // not by touching a file, so the FileView below stays idle.
+                readonly property bool isCommand: row.setting.mode === "command"
                 property var options: row.setting.type === "choose" ? row.setting.options : []
                 property bool postPending: false
 
                 FileView {
                     id: file
-                    path: root.expand(row.setting.file)
+                    path: row.isCommand ? "" : root.expand(row.setting.file)
                     watchChanges: true
                     // Write in place rather than via a temp file and rename, so
                     // a file that is itself a symlink stays one.
@@ -269,9 +282,29 @@ Item {
                     }
                 }
 
+                // "command" settings read their current value by running one.
+                Process {
+                    command: ["bash", "-c", row.setting.read_command || "true"]
+                    running: row.isCommand && root.isOpen
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            const t = this.text.trim()
+                            if (t !== "")
+                                row.value = t
+                        }
+                    }
+                }
+
                 function apply(v: string): void {
                     if (v === "" || v === row.value)
                         return
+                    if (row.isCommand) {
+                        Quickshell.execDetached(["bash", "-c",
+                            String(row.setting.write_command).replace("%s", root.shellQuote(v))])
+                        row.value = v
+                        savedFlash.restart()
+                        return
+                    }
                     // A pattern can only be replaced inside a file that exists.
                     if (row.setting.mode !== "overwrite" && row.fileMissing)
                         return
@@ -332,7 +365,7 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            visible: row.fileMissing && row.setting.mode !== "overwrite"
+                            visible: !row.isCommand && row.fileMissing && row.setting.mode !== "overwrite"
                             text: "Not found: " + row.setting.file
                             color: Theme.on_background
                             opacity: 0.6

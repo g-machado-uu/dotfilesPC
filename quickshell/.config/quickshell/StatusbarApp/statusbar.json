@@ -17,7 +17,7 @@ Default configuration file for the Quickshell Statusbar.
   },
   "modules": {
     "left": ["workspaces", "terminal"],
-    "center": ["launcher", "clock", "swaync"],
+    "center": ["launcher", "clock", "calendar", "controlcentre"],
     "right": [
       "updates",
       "battery",
@@ -45,5 +45,9 @@ Default configuration file for the Quickshell Statusbar.
   "workspaces": {
     "count": 5,
     "showAppIcons": true
+  },
+  "weather": {
+    "location": "Belfast, UK",
+    "desktopWidget": true
   }
 }

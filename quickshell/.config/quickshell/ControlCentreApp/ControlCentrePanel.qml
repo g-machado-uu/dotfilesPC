@@ -6,8 +6,9 @@ import QtQuick.Controls
 import qs.CustomTheme
 import qs.shared
 
-// The notification centre that drops out of the bell in the status bar:
-// quick toggles, then the weather, then swaync's notification state.
+// The control centre that drops out of the sliders icon in the status bar:
+// quick toggles, then the output and input levels, then the weather, and the
+// notification state last.
 //
 // This is only the content — the silhouette, translucency and drop animation
 // come from the BarPanel that hosts it.

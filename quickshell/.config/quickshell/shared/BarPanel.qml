@@ -96,11 +96,27 @@ Item {
         anchor.item: panel.anchorItem
         anchor.edges: panel.anchorEdges
         anchor.gravity: panel.anchorGravity
-        anchor.margins.top: panel.gap
-        // The anchor rect is deliberately left at its default, which is the
-        // whole anchor item: writing anchor.rect.x collapses it to a zero-sized
-        // point at the item's top-left, and the panel then hangs off the icon's
-        // top corner instead of dropping from under it.
+        // The anchor rect is the whole anchor item, which is also what it
+        // defaults to — but spelling it out as a binding is what makes the
+        // popup follow the item as it *resizes*. Left at the default, the
+        // anchor is only re-evaluated when the item moves, so a panel pinned to
+        // the bar's right edge slid out of true whenever the bar changed width
+        // underneath it (the clock unfolding when the desktop widget hands the
+        // time back is enough to do it).
+        //
+        // The gap is added to the rect's height rather than set as
+        // anchor.margins.top, which is not applied to a popup positioned this
+        // way — tested, a 30px top margin moved the panel not at all. Growing
+        // the rect downwards pushes the popup down by the same amount, which is
+        // what the margin was meant to do.
+        //
+        // Note x and y are deliberately not written: setting anchor.rect.x on
+        // its own collapses the rect to a zero-sized point at the item's
+        // top-left, and the panel then hangs off the icon's top corner instead
+        // of dropping from under it.
+        anchor.rect.width: panel.anchorItem ? panel.anchorItem.width : 0
+        anchor.rect.height: (panel.anchorItem ? panel.anchorItem.height : 0)
+            + panel.gap
 
         visible: panel.mapped
         color: "transparent"

@@ -25,7 +25,7 @@ Item {
     signal closeRequested()
     function close(): void { root.closeRequested() }
 
-    property string defaultWallpaperFolder: Quickshell.env("HOME") + "/Pictures/Wallpapers"
+    property string defaultWallpaperFolder: Quickshell.env("HOME") + "/.config/ml4w/wallpapers"
     property string wallpaperSettingFile: Quickshell.env("HOME") + "/.config/ml4w/settings/wallpaper-folder"
 
     // Start as default in case file does not exist

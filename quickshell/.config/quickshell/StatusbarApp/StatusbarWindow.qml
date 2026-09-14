@@ -12,7 +12,7 @@ import qs.CalendarApp
 import qs.PowerApp
 import qs.SidebarApp
 import qs.ClipboardApp
-import qs.NotificationsApp
+import qs.ControlCentreApp
 import qs.MediaApp
 import qs.WallpaperApp
 import qs.SettingsApp
@@ -58,7 +58,7 @@ PanelWindow {
         "bar":    { "height": 36, "reservedHeight": 36, "enabled": true, "alwaysExpanded": false },
         "pill":   { "collapsedWidth": 0, "expandedWidth": 680, "radius": 18, "flareRadius": 18, "animationDuration": 350 },
         "modules":{ "left": ["terminal", "workspaces"],
-                    "center": ["launcher", "clock", "swaync"],
+                    "center": ["launcher", "clock", "calendar", "controlcentre"],
                     "right": ["updates", "battery", "powerprofile", "volume", "systemtray", "keyboard", "clipboard", "power"] },
         "border": { "width": 0, "colorTop": "", "colorBottom": "" },
         "opacity":{ "collapsed": 0.82, "expanded": 0.9 },
@@ -67,7 +67,10 @@ PanelWindow {
         // Free-text place name for the notification panel's weather. Anything
         // after the first comma is a hint used to pick between same-named
         // places (e.g. "Belfast, UK" vs "Belfast, US").
-        "weather": { "location": "Belfast, UK" }
+        // desktopWidget: whether the time/weather widget is allowed onto an
+        // empty workspace at all. Off means the bar keeps the clock at all
+        // times and the widget never appears.
+        "weather": { "location": "Belfast, UK", "desktopWidget": true }
     })
 
     property var settings: defaultSettings
@@ -163,14 +166,17 @@ PanelWindow {
         root.settings = merged
     }
 
-    // Persist a bar.<key> boolean into the master file and return the updated
-    // text. A regex replace is used when the key is already present (so the
+    // Persist a <group>.<key> boolean into the master file and return the
+    // updated text. A regex replace is used when the key is already present (so
     // file's formatting/comments are kept); when the key is missing (e.g. an
     // override file that did not list it) it falls back to a JSON rewrite of the
     // parsed document. If the file cannot be parsed at all the write is skipped
     // rather than replaced with an empty object, so a malformed hand-edited
     // override is never wiped — its current text is returned unchanged.
-    function persistBarFlag(key, on): string {
+    //
+    // Like persistString, the key is matched on its own rather than within its
+    // group, so it has to be unique across the document.
+    function persistFlag(group, key, on): string {
         let file = root.masterFile()
         let src = file.text()
         let re = new RegExp('("' + key + '"\\s*:\\s*)(true|false)')
@@ -187,9 +193,41 @@ PanelWindow {
             }
             if (typeof obj !== "object" || obj === null)
                 obj = {}
-            if (obj.bar === undefined)
-                obj.bar = {}
-            obj.bar[key] = on
+            if (obj[group] === undefined)
+                obj[group] = {}
+            obj[group][key] = on
+            updated = JSON.stringify(obj, null, 4) + "\n"
+        }
+        file.setText(updated)
+        return updated
+    }
+
+    // Persist a string setting into the master file and return the updated text.
+    // Mirrors persistFlag: a regex replace while the key is already there (so
+    // the file's formatting and comments survive), a JSON rewrite of the parsed
+    // document when it is not, and no write at all when the file is non-empty
+    // and unparseable. The key is matched on its own, not within its group, so
+    // it has to be unique across the document — "location" is.
+    function persistString(group, key, value): string {
+        let file = root.masterFile()
+        let src = file.text()
+        let escaped = String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+        let re = new RegExp('("' + key + '"\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"')
+        let updated
+        if (re.test(src)) {
+            updated = src.replace(re, (m, p1) => p1 + '"' + escaped + '"')
+        } else {
+            let obj = root.parseSettings(src)
+            if (obj === undefined && src && src.trim() !== "") {
+                console.warn("statusbar settings: master file is not valid"
+                    + " JSON; leaving it untouched instead of overwriting.")
+                return src
+            }
+            if (typeof obj !== "object" || obj === null)
+                obj = {}
+            if (obj[group] === undefined)
+                obj[group] = {}
+            obj[group][key] = value
             updated = JSON.stringify(obj, null, 4) + "\n"
         }
         file.setText(updated)
@@ -220,7 +258,7 @@ PanelWindow {
     // updated text, which updates settings.bar.enabled and therefore the
     // barEnabled binding above.
     function setEnabled(on: bool): void {
-        applySettings(persistBarFlag("enabled", on))
+        applySettings(persistFlag("bar", "enabled", on))
     }
 
     // Keep the pill expanded regardless of hover. Set via IPC
@@ -228,6 +266,11 @@ PanelWindow {
     // Hyprland, and cleared on Escape, after running a module, or when the
     // focus grab is released because the user interacted with another window.
     property bool barExpanded: false
+
+    // Set by shell.qml while the desktop widget is showing the time and date on
+    // an empty workspace: the bar folds its own clock away so the two are never
+    // both on screen. The handover timing lives in the widget.
+    property bool hideClock: false
 
     // When set in statusbar.json the pill never collapses: it stays in its
     // expanded (full-width) state independent of hover or the IPC toggle. This
@@ -238,7 +281,18 @@ PanelWindow {
     // Persist the alwaysExpanded state into the master file and apply it.
     // Mirrors setEnabled.
     function setAlwaysExpanded(on: bool): void {
-        applySettings(persistBarFlag("alwaysExpanded", on))
+        applySettings(persistFlag("bar", "alwaysExpanded", on))
+    }
+
+    // Whether the desktop time/weather widget is allowed onto an empty
+    // workspace. shell.qml hands this to the widget; with it off the widget
+    // never appears and the bar keeps its own clock permanently.
+    property bool weatherWidgetEnabled: settings.weather.desktopWidget
+
+    // Persist the desktop widget flag into the master file and apply it.
+    // Mirrors setEnabled.
+    function setWeatherWidget(on: bool): void {
+        applySettings(persistFlag("weather", "desktopWidget", on))
     }
 
     // --- MODULE PLACEMENT ---
@@ -257,12 +311,29 @@ PanelWindow {
         id: cClock
         ClockModule {
             expanded: pill.expanded
+            hidden: root.hideClock
             timeFormat: root.settings.clock.format
             dateFormat: root.settings.clock.dateFormat
+            // Rebuild the keyboard navigation list when the clock folds away or
+            // comes back, the same way the other foldable modules do.
+            onCollapsedChanged: Qt.callLater(root.rebuildNavItems)
             onToggleRequested: root.togglePanel("calendar")
         }
     }
     Component { id: cSwaync;     SwayncModule {} }
+    // The clock's opposite number: it unfolds into the gap the clock leaves
+    // while the desktop widget has the time, so the calendar is still one
+    // click away from the middle of the bar.
+    Component {
+        id: cCalendar
+        CalendarModule {
+            shown: root.hideClock
+            // Rebuild the keyboard navigation list as it folds in and out, the
+            // same way the clock does.
+            onCollapsedChanged: Qt.callLater(root.rebuildNavItems)
+            onClicked: root.togglePanel("calendar")
+        }
+    }
     Component {
         id: cMedia
         MediaModule {
@@ -273,9 +344,9 @@ PanelWindow {
         }
     }
     Component {
-        id: cNotifications
-        NotificationsModule {
-            onClicked: root.togglePanel("notifications")
+        id: cControlCentre
+        ControlCentreModule {
+            onClicked: root.togglePanel("controlcentre")
         }
     }
     // True while a system-tray context menu is open. Kept at window scope so
@@ -333,6 +404,7 @@ PanelWindow {
             panelFlare: pill.flare
             panelRadius: pill.bottomRadius
             panelOpacity: root.settings.opacity.expanded
+            panelGap: Math.max(0, (root.barHeight - height) / 2)
         }
     }
 
@@ -341,8 +413,13 @@ PanelWindow {
         "workspaces": cWorkspaces,
         "launcher":   cLauncher,
         "clock":      cClock,
+        "calendar":   cCalendar,
         "swaync":     cSwaync,
-        "notifications": cNotifications,
+        "controlcentre": cControlCentre,
+        // The control centre was called "notifications" when it was only a
+        // notification list. Kept as an alias so an existing statusbar.json
+        // keeps working.
+        "notifications": cControlCentre,
         "media":         cMedia,
         "systemtray": cSystemTray,
         "keyboard":   cKeyboard,
@@ -523,11 +600,22 @@ PanelWindow {
     }
 
     IpcHandler {
+        target: "controlcentre"
+        function toggle(): void { root.togglePanel("controlcentre") }
+        function open(): void { root.openPanel = "controlcentre" }
+        function close(): void { root.closePanel("controlcentre") }
+        function isOpen(): bool { return root.openPanel === "controlcentre" }
+    }
+
+    // The control centre answered to "notifications" while it was only a
+    // notification list. Kept so existing keybindings and scripts still reach
+    // it under the old name.
+    IpcHandler {
         target: "notifications"
-        function toggle(): void { root.togglePanel("notifications") }
-        function open(): void { root.openPanel = "notifications" }
-        function close(): void { root.closePanel("notifications") }
-        function isOpen(): bool { return root.openPanel === "notifications" }
+        function toggle(): void { root.togglePanel("controlcentre") }
+        function open(): void { root.openPanel = "controlcentre" }
+        function close(): void { root.closePanel("controlcentre") }
+        function isOpen(): bool { return root.openPanel === "controlcentre" }
     }
 
     IpcHandler {
@@ -580,6 +668,27 @@ PanelWindow {
         function collapse(): void { root.barExpanded = false }
         // Re-read statusbar.json and apply the changes.
         function reload(): void { root.reloadSettings() }
+        // The place the weather widgets look up. The bar owns the write, so the
+        // settings panel and the notification centre both go through here
+        // instead of editing statusbar.json themselves.
+        function weatherLocation(): string { return root.settings.weather.location }
+        // The desktop time/weather widget. Off means it never appears and the
+        // bar's own clock stays out permanently. Toggled from the sidebar
+        // switch; the read returns "1" / "0" for a shell caller.
+        function weatherWidget(): string {
+            return root.weatherWidgetEnabled ? "1" : "0"
+        }
+        function enableWeatherWidget(): void { root.setWeatherWidget(true) }
+        function disableWeatherWidget(): void { root.setWeatherWidget(false) }
+        function toggleWeatherWidget(): void {
+            root.setWeatherWidget(!root.weatherWidgetEnabled)
+        }
+        function setWeatherLocation(location: string): void {
+            let name = location.trim()
+            if (name === "")
+                return
+            root.applySettings(root.persistString("weather", "location", name))
+        }
     }
 
     color: "transparent"
@@ -615,9 +724,12 @@ PanelWindow {
         property bool expanded: hoverHandler.hovered || root.barExpanded
             || root.alwaysExpanded || root.trayMenuOpen || root.openPanel !== ""
         // 0 in the settings file means "hug the center content".
+        // The center area carries half of its own gap on each outer end (see
+        // its margins below), so 14 of the old padding is already in its
+        // implicit width.
         property real collapsedWidth: root.settings.pill.collapsedWidth > 0
             ? root.settings.pill.collapsedWidth
-            : centerArea.implicitWidth + 32
+            : centerArea.implicitWidth + 18
 
         // Minimum width the content needs so the centered center area never
         // overlaps the left/right areas. The center stays centered, so each
@@ -628,7 +740,7 @@ PanelWindow {
         // pushes the bar wider instead of clipping.
         property real contentWidth: centerArea.implicitWidth
             + 2 * Math.max(leftArea.implicitWidth, rightArea.implicitWidth)
-            + 64
+            + 50
         // expandedWidth from the settings file is treated as a minimum: the
         // pill grows past it when the content needs more room.
         property real expandedWidth: Math.max(
@@ -759,16 +871,28 @@ PanelWindow {
         // ==========================================
         // CENTER AREA (always visible)
         // ==========================================
+        // The gap between the center modules is carried as a margin on each
+        // module rather than as the layout's spacing, because a module that
+        // folds away (the clock, when the desktop widget has the time) can then
+        // close its own gap as it goes. Layout spacing would survive the fold
+        // at full width and leave a hole in the middle of the bar.
         RowLayout {
             id: centerArea
             anchors.centerIn: parent
-            spacing: 14
+            spacing: 0
 
             Repeater {
                 id: centerRepeater
                 model: root.settings.modules.center
                 Loader {
+                    id: centerSlot
                     Layout.alignment: Qt.AlignVCenter
+                    // Half the gap on each side, scaled down by however far the
+                    // module has folded (0 = fully out, 1 = fully folded).
+                    readonly property real foldAmount:
+                        (item && item.fold !== undefined) ? item.fold : 0
+                    Layout.leftMargin: 7 * (1 - centerSlot.foldAmount)
+                    Layout.rightMargin: 7 * (1 - centerSlot.foldAmount)
                     sourceComponent: root.moduleComponents[modelData] || null
                     onLoaded: Qt.callLater(root.rebuildNavItems)
                 }
@@ -826,13 +950,26 @@ PanelWindow {
             flare: pill.flare
             cornerRadius: pill.bottomRadius
             backgroundOpacity: root.settings.opacity.expanded
+            // A panel hanging off a module hangs off that module's *bottom*,
+            // which is a few pixels above the bar's: the modules are 30px tall
+            // and centred in a taller bar. Left at zero the panel's top edge
+            // would start inside the bar and its flares would curl against the
+            // bar's fill instead of out of its underside. Panels anchored to
+            // the bar body itself already start in the right place.
+            gap: (anchorItem && anchorItem !== pill)
+                ? Math.max(0, (pill.height - anchorItem.height) / 2)
+                : 0
         }
 
         BarDropdown {
             id: calendarPanel
-            // Falls back to the centre group if the clock has been removed from
-            // the bar, so the keybinding still puts the calendar somewhere sane.
-            anchorItem: root.moduleRefs["clock"] || centerArea
+            // Hangs off whichever of the two centre modules is currently out:
+            // the clock normally, and the calendar button that replaces it
+            // while the desktop widget has the time. Falls back to the bar
+            // itself if neither is placed, so the keybinding still puts the
+            // calendar somewhere sane.
+            anchorItem: (root.hideClock ? root.moduleRefs["calendar"] : null)
+                || root.moduleRefs["clock"] || root.moduleRefs["calendar"] || pill
             open: root.openPanel === "calendar"
             onDismissed: root.closePanel("calendar")
             panelWidth: 340
@@ -880,18 +1017,18 @@ PanelWindow {
         }
 
         BarDropdown {
-            id: notificationsPanel
+            id: controlCentrePanel
             // Dropped from the middle of the bar, like the other wide panels.
             anchorItem: pill
-            open: root.openPanel === "notifications"
-            onDismissed: root.closePanel("notifications")
+            open: root.openPanel === "controlcentre"
+            onDismissed: root.closePanel("controlcentre")
             panelWidth: 420
             panelHeight: 528
             panelContent: Component {
-                NotificationPanel {
-                    isOpen: root.openPanel === "notifications"
+                ControlCentrePanel {
+                    isOpen: root.openPanel === "controlcentre"
                     location: root.settings.weather.location
-                    onCloseRequested: root.closePanel("notifications")
+                    onCloseRequested: root.closePanel("controlcentre")
                 }
             }
         }

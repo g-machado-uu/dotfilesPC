@@ -169,6 +169,20 @@
     ]
   },
   {
+    "group": "Statusbar",
+    "description": "The status bar and the desktop time & weather widget.",
+    "settings": [
+      {
+        "name": "Weather location",
+        "type": "textfield",
+        "mode": "command",
+        "read_command": "qs ipc call statusbar weatherLocation",
+        "write_command": "qs ipc call statusbar setWeatherLocation %s",
+        "default": "Belfast, UK"
+      }
+    ]
+  },
+  {
     "group": "System",
     "description": "Core Hyprland variants.",
     "settings": [
