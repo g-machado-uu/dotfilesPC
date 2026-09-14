@@ -340,7 +340,63 @@ PanelWindow {
             // Rebuild the keyboard navigation list when a player appears or
             // goes away (the module folds out of the layout with it).
             onCollapsedChanged: Qt.callLater(root.rebuildNavItems)
-            onClicked: root.togglePanel("media")
+            // A click on a panel that hovering opened keeps it open (and gives
+            // it the keyboard) rather than closing it under the pointer.
+            onClicked: {
+                if (root.mediaHoverOpen)
+                    root.mediaHoverOpen = false
+                else
+                    root.togglePanel("media")
+            }
+        }
+    }
+
+    // --- MEDIA PANEL ON HOVER ---
+    // Resting the pointer on the media module for a second opens its panel, and
+    // leaving both the module and the panel closes it again. The close waits a
+    // moment so crossing from the module down into the panel (over the strip of
+    // bar between them) never drops it. A panel opened by a click, a keybinding
+    // or the keyboard is left alone.
+    property bool mediaHoverOpen: false
+    readonly property bool mediaHoverInside:
+        (root.moduleRefs["media"] ? root.moduleRefs["media"].hovered === true : false)
+        || mediaPanel.hovered
+
+    onMediaHoverInsideChanged: {
+        if (root.mediaHoverInside) {
+            mediaHoverCloseTimer.stop()
+            if (root.openPanel === "")
+                mediaHoverOpenTimer.restart()
+        } else {
+            mediaHoverOpenTimer.stop()
+            if (root.mediaHoverOpen)
+                mediaHoverCloseTimer.restart()
+        }
+    }
+
+    // Anything else taking over the panel slot ends hover mode.
+    onOpenPanelChanged: {
+        if (root.openPanel !== "media")
+            root.mediaHoverOpen = false
+    }
+
+    Timer {
+        id: mediaHoverOpenTimer
+        interval: 1000
+        onTriggered: {
+            if (root.mediaHoverInside && root.openPanel === "") {
+                root.mediaHoverOpen = true
+                root.openPanel = "media"
+            }
+        }
+    }
+
+    Timer {
+        id: mediaHoverCloseTimer
+        interval: 400
+        onTriggered: {
+            if (root.mediaHoverOpen && !root.mediaHoverInside)
+                root.closePanel("media")
         }
     }
     Component {
@@ -1005,6 +1061,7 @@ PanelWindow {
             id: mediaPanel
             anchorItem: root.moduleRefs["media"] || pill
             open: root.openPanel === "media"
+            grabFocus: !root.mediaHoverOpen
             onDismissed: root.closePanel("media")
             panelWidth: 360
             panelHeight: 140
@@ -1023,7 +1080,7 @@ PanelWindow {
             open: root.openPanel === "controlcentre"
             onDismissed: root.closePanel("controlcentre")
             panelWidth: 420
-            panelHeight: 528
+            panelHeight: 568
             panelContent: Component {
                 ControlCentrePanel {
                     isOpen: root.openPanel === "controlcentre"

@@ -38,6 +38,8 @@ Rectangle {
     signal clicked()
     function activate(): void { media.clicked() }
 
+    // The bar opens the media panel after the pointer rests here for a moment.
+    readonly property bool hovered: mouseArea.containsMouse
     readonly property bool active: mouseArea.containsMouse || media.focused
 
     visible: !collapsed

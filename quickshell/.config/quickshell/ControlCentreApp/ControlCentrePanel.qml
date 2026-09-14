@@ -7,7 +7,7 @@ import qs.CustomTheme
 import qs.shared
 
 // The control centre that drops out of the sliders icon in the status bar:
-// quick toggles, then the output and input levels, then the weather, and the
+// shortcuts to the other panels, quick toggles, then the output and input levels, then the weather, and the
 // notification state last.
 //
 // This is only the content — the silhouette, translucency and drop animation
@@ -16,7 +16,7 @@ Item {
     id: root
 
     readonly property real panelWidth: 420
-    readonly property real panelHeight: 528
+    readonly property real panelHeight: 568
 
     // Mirrors the hosting panel's state. Polling and animations only run while
     // the panel is actually on screen.
@@ -402,6 +402,42 @@ Item {
         }
     }
 
+    // A small round button that opens another panel, the same accent circle
+    // the bar's own buttons fill on hover.
+    component ShortcutButton: Rectangle {
+        id: sc
+        property string iconSrc: ""
+        // Shown in the header while hovered, e.g. "Settings · Super+Shift+S".
+        property string hint: ""
+        // Same command as the matching Hyprland keybinding.
+        property string command: ""
+        readonly property bool hovered: scMouse.containsMouse
+
+        implicitWidth: 28
+        implicitHeight: 28
+        radius: 14
+        color: sc.hovered ? Theme.primary : "transparent"
+        Behavior on color {
+            ColorAnimation { duration: 180; easing.type: Easing.OutQuint }
+        }
+
+        IconGlyph {
+            anchors.centerIn: parent
+            source: sc.iconSrc
+            size: 15
+            color: sc.hovered ? Theme.background : Theme.primary
+        }
+
+        MouseArea {
+            id: scMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            // The other panel replaces this one in the bar's single slot.
+            onClicked: Quickshell.execDetached(["bash", "-c", sc.command])
+        }
+    }
+
     // A labelled level slider, styled like the ones in the sidebar.
     component LevelSlider: RowLayout {
         id: lvl
@@ -492,6 +528,42 @@ Item {
         opacity: root.page === "" ? 1 : 0
         Behavior on opacity {
             NumberAnimation { duration: 140; easing.type: Easing.OutQuint }
+        }
+
+        // --- SHORTCUTS ---
+        // The panels that otherwise only open from a keybinding.
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: -4
+            spacing: 4
+
+            SectionLabel {
+                Layout.fillWidth: true
+                text: sidebarShortcut.hovered ? sidebarShortcut.hint
+                    : settingsShortcut.hovered ? settingsShortcut.hint
+                    : wallpaperShortcut.hovered ? wallpaperShortcut.hint
+                    : ""
+                elide: Text.ElideRight
+            }
+
+            ShortcutButton {
+                id: sidebarShortcut
+                iconSrc: "../shared/icons/sidebar.svg"
+                hint: "SIDEBAR · SUPER+CTRL+S"
+                command: "qs ipc call sidebar toggle"
+            }
+            ShortcutButton {
+                id: settingsShortcut
+                iconSrc: "../shared/icons/settings.svg"
+                hint: "SETTINGS · SUPER+SHIFT+S"
+                command: "qs ipc call settings toggle"
+            }
+            ShortcutButton {
+                id: wallpaperShortcut
+                iconSrc: "../shared/icons/wallpaper.svg"
+                hint: "WALLPAPERS · SUPER+CTRL+W"
+                command: "$HOME/.config/ml4w/scripts/ml4w-wallpaper-app"
+            }
         }
 
         // --- QUICK TOGGLES ---

@@ -28,6 +28,15 @@ Item {
     property bool open: false
     signal dismissed()
 
+    // Whether an open panel takes the keyboard and closes on a click outside.
+    // Off for a panel opened by hovering: the grab withholds the pointer from
+    // every other surface, so the bar module under the cursor would see the
+    // pointer leave the moment the panel appeared, and the panel would close
+    // again straight away. Such a panel is closed by the pointer leaving instead.
+    property bool grabFocus: true
+    // True while the pointer is over the panel body.
+    readonly property bool hovered: bodyHover.hovered
+
     // Which corner of the anchor the panel hangs from, and which way it grows.
     // The default centres it under the anchor. Pass Edges.Bottom | Edges.Right
     // and Edges.Bottom | Edges.Left to pin the panel's right edge to the
@@ -129,7 +138,7 @@ Item {
         // Click anywhere outside to dismiss, the same primitive the bar uses.
         HyprlandFocusGrab {
             windows: [popup]
-            active: panel.open
+            active: panel.open && panel.grabFocus
             onCleared: panel.dismissed()
         }
 
@@ -161,6 +170,11 @@ Item {
                     // flares can differ.
                     x: panel.flareLeft
                     y: 0
+
+                    // Passive, so the content's own MouseAreas still hover.
+                    HoverHandler {
+                        id: bodyHover
+                    }
 
                     // The bar's own silhouette and translucency. The opacity
                     // belongs here and not on the content above it, exactly as
