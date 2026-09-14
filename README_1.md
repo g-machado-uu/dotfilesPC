@@ -29,32 +29,25 @@ can be modified by changing `~/.config/ml4w/settings/statusbar.json`.
 <details>
 <summary>The apps that drop down from the statusbar</summary>
 
-Control centre (`SUPER + CTRL + S`), which also took over the old sidebar. Top
-to bottom:
-
-- shortcuts to the wallpaper picker and Settings (hover one to see its keys)
-- tiles for Wi-Fi, Bluetooth, Do Not Disturb, Caffeine, Night Light and
-  Gamemode; Wi-Fi and Bluetooth open sub-pages in place
-- the notification count, with **Clear all** and **Open** (swaync still
-  handles notifications)
-- volume, microphone and brightness
-- **Appearance ›**, a sub-page with the dark style for GTK apps, the GTK and Qt
-  theme tools, the weather widget switch, the colour picker and HyprMod
-- the weather; clicking the place name turns it into a text field, which
-  changes the place for both the control centre and the widget
-- whatever is playing, always last; with several players, the counter in the
-  corner switches between them
-
-It is the `controlcentre` module in the bar, with a mark under the glyph while
-notifications are waiting and a bar there while Do Not Disturb is on. It still
-answers to its old names, `notifications` and `sidebar`, in `qs ipc`
-(`notifications` also in `statusbar.json`).
+Control centre — toggles, sliders, the weather and the notification count.
+At the moment, notifications are still handled by Swaync.
+Wi-Fi and Bluetooth open sub-pages in place. Clicking the place name above the
+weather turns it into a text field, which modifies the fetch to display the weather
+in both control centre and the widget. It is the `controlcentre` module, a set of
+sliders in the bar, with a mark under the glyph while notifications are waiting
+and a bar there while Do Not Disturb is on. It still answers to its old name,
+`notifications`, in both `statusbar.json` and `qs ipc`.
 
 ![Control centre](docs/img/notification-centre.jpg)
 
 The Settings panel, on its Statusbar tab.
 
 ![Settings panel](docs/img/settings-panel.jpg)
+
+The sidebar, weather widget and gamemode switches, wallpaper and theme, and a way into
+Settings.
+
+![Sidebar](docs/img/sidebar.jpg)
 
 The wallpaper picker. Picking one runs matugen, which recolours the bar, GTK,
 kitty, rofi, btop and swaync.
@@ -136,10 +129,7 @@ The widget sits on an empty workspace. Open a window, or switch to a workspace
 that has one, and it is sucked up into the bar, which takes the clock back over
 at the same moment. Once you change to an empty workspace, it will be thrown out
 of the statusbar once again, giving place to a calendar icon, which opens ML4W
-calendar app. It can be switched off in the control centre, under Appearance.
-
-Above the current conditions it shows the place the weather is for. It is only
-a label; change the place in the control centre or in Settings.
+calendar app. It can be toggled in the sidebar (which now comes from the top).
 
 Three sections: the time with the day and date under it, current conditions,
 and a three-day forecast.
@@ -193,7 +183,7 @@ binding, so the widget re-geocodes without being told.
 The separate ML4W settings app is replaced by a panel that drops out of the
 bar, like the control centre. Open it three ways:
 
-- the settings shortcut at the top of the control centre, or `SUPER + SHIFT + S`
+- the **Settings** button or the theme icon in the sidebar
 - `qs ipc call settings toggle`
 - the `settings` alias
 
@@ -226,7 +216,7 @@ SUPER is the modifier. `SUPER + CTRL + K` shows the full list; the source is
 | `SUPER + RETURN` / `B` / `E`              | terminal, browser, file manager                   |
 | `SUPER + CTRL + RETURN`                   | application launcher                              |
 | `SUPER + SPACE`                           | expand the bar and give it keyboard focus         |
-| `SUPER + CTRL + S`                        | control centre                                    |
+| `SUPER + CTRL + S`                        | sidebar                                           |
 | `SUPER + CTRL + W`                        | wallpaper picker                                  |
 | `SUPER + V`                               | clipboard history                                 |
 | `SUPER + ALT + M`                         | the floating bubble system monitor                |
@@ -279,11 +269,9 @@ the list over to swaync's window.
 
 **Edited:**
 
-- **Sidebar:** merged into the control centre. The duplicate volume, brightness,
-  wallpaper and settings controls, the screenshot button and the status bar
-  switch and menu are gone (`SUPER + CTRL + B` and `SUPER + SHIFT + B` cover
-  the bar); gamemode is a tile and the theme tools are on the Appearance page.
-- **`SUPER + Q`:** closes any open bar panel first.
+- **Sidebar:** Welcome button, waybar engine switch, waybar menu items and dock
+  switches removed.
+- **`SUPER + Q`:** closes an open Settings panel too.
 - **Wallpaper script and GTK theme listener:** no longer restart waybar or the
   dock.
 - **Autostart log:** written to `~/.cache/ml4w-autostart.log` instead of

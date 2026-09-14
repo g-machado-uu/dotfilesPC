@@ -34,7 +34,7 @@ PanelWindow {
     // Qt date/time formats, kept in step with the bar's own clock.
     property string timeFormat: "HH:mm"
     // Whether the widget is wanted at all (statusbar.json, weather.desktopWidget,
-    // toggled from the sidebar). Off means it never comes out, so the bar's own
+    // toggled on the control centre's Appearance page). Off means it never comes out, so the bar's own
     // clock is never folded away.
     property bool widgetEnabled: true
 
@@ -444,111 +444,132 @@ PanelWindow {
             revealed: w.shown
             inDelay: 90
             outDelay: 80
-            implicitHeight: weatherRow.height + 6
+            implicitHeight: weatherCol.height + 6
 
-            // The reading and the detail block are laid out as one row and that
-            // row is centred, so what lands on the widget's centre line is the
-            // gap between them rather than either block.
-            Row {
-                id: weatherRow
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 34
+            Column {
+                id: weatherCol
+                width: parent.width
+                spacing: 8
 
-                // Icon and temperature.
-                Row {
-                    id: nowRow
-                    spacing: 14
-
-                    WeatherIcon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        size: 84
-                        code: weather.code
-                        night: !weather.isDay
-                        // Parked while a section is in flight, so the transition
-                        // gets the whole frame budget, and again once the
-                        // arrival has had its moment of movement.
-                        animate: w.glyphMotion && !w.animating
-                        // Monochrome: the palette's own accent is derived from
-                        // the wallpaper and can land at any brightness, which is
-                        // the one thing this surface cannot afford.
-                        warm: w.ink
-                        cool: w.inkDim
-                        opacity: weather.loaded ? 1 : 0.4
-                    }
-
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: -2
-
-                        InkText {
-                            text: weather.loaded ? weather.fmt(weather.temperature) : "--°"
-                            font.pixelSize: 58
-                        }
-
-                        InkText {
-                            text: weather.error !== "" ? weather.error
-                                : (weather.loaded ? conditionGlyph.label : "Loading…")
-                            color: w.inkDim
-                            font.pixelSize: 15
-                            font.letterSpacing: 0.5
-                        }
-                    }
+                // Where the reading is for, as the control centre labels it. Read
+                // only: the place is changed in the control centre or the settings.
+                // Its height is fixed so the geocoder answering never resizes the
+                // window (see implicitHeight above).
+                InkText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    height: 16
+                    verticalAlignment: Text.AlignVCenter
+                    text: (weather.place !== "" ? weather.place : w.location).toUpperCase()
+                    color: w.inkFaint
+                    font.pixelSize: 12
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2
                 }
 
-                // Today's range and the rest of the readings, sitting to the
-                // right of the reading and level with the top of it.
-                GridLayout {
-                    id: detailGrid
-                    columns: 2
-                    columnSpacing: 10
-                    rowSpacing: 2
+                // The reading and the detail block are laid out as one row and that
+                // row is centred, so what lands on the widget's centre line is the
+                // gap between them rather than either block.
+                Row {
+                    id: weatherRow
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 34
 
-                    component DetailLabel: InkText {
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        color: w.inkFaint
-                        font.pixelSize: 11
-                        font.weight: Font.Bold
-                        font.letterSpacing: 1
-                    }
+                    // Icon and temperature.
+                    Row {
+                        id: nowRow
+                        spacing: 14
 
-                    component DetailValue: InkText {
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        color: w.inkDim
-                        font.pixelSize: 15
-                    }
-
-                    DetailLabel { text: "MIN / MAX" }
-                    DetailValue {
-                        text: weather.loaded
-                            ? weather.fmt(weather.todayMin) + " / " + weather.fmt(weather.todayMax)
-                            : "--° / --°"
-                        color: w.ink
-                    }
-
-                    DetailLabel { text: "HUMIDITY" }
-                    DetailValue { text: weather.loaded ? weather.humidity + "%" : "--%" }
-
-                    DetailLabel { text: "FEELS LIKE" }
-                    DetailValue { text: weather.loaded ? weather.fmt(weather.apparent) : "--°" }
-
-                    RowLayout {
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        spacing: 5
-
-                        WindArrow {
-                            Layout.alignment: Qt.AlignVCenter
-                            glyphSize: 11
-                            bearing: weather.windDirection
-                            opacity: weather.loaded ? 1 : 0
+                        WeatherIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            size: 84
+                            code: weather.code
+                            night: !weather.isDay
+                            // Parked while a section is in flight, so the transition
+                            // gets the whole frame budget, and again once the
+                            // arrival has had its moment of movement.
+                            animate: w.glyphMotion && !w.animating
+                            // Monochrome: the palette's own accent is derived from
+                            // the wallpaper and can land at any brightness, which is
+                            // the one thing this surface cannot afford.
+                            warm: w.ink
+                            cool: w.inkDim
+                            opacity: weather.loaded ? 1 : 0.4
                         }
 
-                        DetailLabel { text: "WIND" }
-                    }
-                    DetailValue { text: weather.loaded ? weather.windMetar : "--" }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: -2
 
-                    DetailLabel { text: "QNH" }
-                    DetailValue {
-                        text: weather.loaded ? Math.round(weather.pressure) + " hPa" : "--"
+                            InkText {
+                                text: weather.loaded ? weather.fmt(weather.temperature) : "--°"
+                                font.pixelSize: 58
+                            }
+
+                            InkText {
+                                text: weather.error !== "" ? weather.error
+                                    : (weather.loaded ? conditionGlyph.label : "Loading…")
+                                color: w.inkDim
+                                font.pixelSize: 15
+                                font.letterSpacing: 0.5
+                            }
+                        }
+                    }
+
+                    // Today's range and the rest of the readings, sitting to the
+                    // right of the reading and level with the top of it.
+                    GridLayout {
+                        id: detailGrid
+                        columns: 2
+                        columnSpacing: 10
+                        rowSpacing: 2
+
+                        component DetailLabel: InkText {
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            color: w.inkFaint
+                            font.pixelSize: 11
+                            font.weight: Font.Bold
+                            font.letterSpacing: 1
+                        }
+
+                        component DetailValue: InkText {
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            color: w.inkDim
+                            font.pixelSize: 15
+                        }
+
+                        DetailLabel { text: "MIN / MAX" }
+                        DetailValue {
+                            text: weather.loaded
+                                ? weather.fmt(weather.todayMin) + " / " + weather.fmt(weather.todayMax)
+                                : "--° / --°"
+                            color: w.ink
+                        }
+
+                        DetailLabel { text: "HUMIDITY" }
+                        DetailValue { text: weather.loaded ? weather.humidity + "%" : "--%" }
+
+                        DetailLabel { text: "FEELS LIKE" }
+                        DetailValue { text: weather.loaded ? weather.fmt(weather.apparent) : "--°" }
+
+                        RowLayout {
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            spacing: 5
+
+                            WindArrow {
+                                Layout.alignment: Qt.AlignVCenter
+                                glyphSize: 11
+                                bearing: weather.windDirection
+                                opacity: weather.loaded ? 1 : 0
+                            }
+
+                            DetailLabel { text: "WIND" }
+                        }
+                        DetailValue { text: weather.loaded ? weather.windMetar : "--" }
+
+                        DetailLabel { text: "QNH" }
+                        DetailValue {
+                            text: weather.loaded ? Math.round(weather.pressure) + " hPa" : "--"
+                        }
                     }
                 }
             }

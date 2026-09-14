@@ -3,14 +3,17 @@ import QtQuick.Layouts
 import qs.CustomTheme
 import qs.shared
 
-// Header for a control-centre sub-page: back arrow, title, a refresh
-// button and the radio's own on/off switch.
+// Header for a control-centre sub-page: back arrow, title, and — for the radio
+// pages — a refresh button and the radio's own on/off switch. Pages without a
+// radio hide both, so no switch appears that has nothing to switch.
 RowLayout {
     id: header
 
     property string title: ""
     property bool toggleOn: false
     property bool busy: false
+    property bool showRefresh: true
+    property bool showToggle: true
 
     signal back()
     signal toggled()
@@ -59,7 +62,7 @@ RowLayout {
 
     // Spins while a connection attempt is in flight.
     IconGlyph {
-        visible: header.busy
+        visible: header.showRefresh && header.busy
         source: "../shared/icons/refresh.svg"
         size: 15
         color: Theme.primary
@@ -73,38 +76,13 @@ RowLayout {
 
     HeaderButton {
         iconSrc: "../shared/icons/refresh.svg"
-        visible: !header.busy
+        visible: header.showRefresh && !header.busy
         onActivated: header.refresh()
     }
 
-    // The radio switch, same shape as the sidebar's switches.
-    Rectangle {
-        implicitWidth: 42
-        implicitHeight: 22
-        radius: 11
-        color: header.toggleOn ? Theme.primary : "transparent"
-        border.color: Theme.primary
-        border.width: 1
-        Behavior on color {
-            ColorAnimation { duration: 180; easing.type: Easing.OutQuint }
-        }
-
-        Rectangle {
-            width: 16
-            height: 16
-            radius: 8
-            y: 3
-            x: header.toggleOn ? parent.width - width - 3 : 3
-            color: header.toggleOn ? Theme.background : Theme.primary
-            Behavior on x {
-                NumberAnimation { duration: 180; easing.type: Easing.OutQuint }
-            }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: header.toggled()
-        }
+    ToggleSwitch {
+        visible: header.showToggle
+        on: header.toggleOn
+        onToggled: header.toggled()
     }
 }

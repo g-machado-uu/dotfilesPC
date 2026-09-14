@@ -10,7 +10,6 @@ import qs.CustomTheme
 import qs.shared
 import qs.CalendarApp
 import qs.PowerApp
-import qs.SidebarApp
 import qs.ClipboardApp
 import qs.ControlCentreApp
 import qs.MediaApp
@@ -46,11 +45,11 @@ PanelWindow {
     //
     //   1. ~/.config/ml4w-statusbar/statusbar.json — the user override. When this
     //      file EXISTS it is the master: every value is read from it and the
-    //      Sidebar switches write their changes (enabled / alwaysExpanded) back
-    //      into it. The shipped file is ignored while it exists.
+    //      IPC setters write their changes (enabled, alwaysExpanded, weather)
+    //      back into it. The shipped file is ignored while it exists.
     //   2. ~/.config/ml4w/settings/statusbar.json — the shipped fallback, used
     //      only when the override file is absent. It carries the dynamic state
-    //      the SidebarApp writes (bar.enabled and bar.alwaysExpanded).
+    //      the IPC setters write (bar.enabled, bar.alwaysExpanded, weather).
     //
     // The active master file is merged over the built-in defaults, so a partial
     // or entirely missing file still leaves every value defined.
@@ -104,7 +103,7 @@ PanelWindow {
     }
 
     // The active master file: the override when it exists, otherwise the shipped
-    // file. The Sidebar switches write here and applySettings reads from here.
+    // file. The IPC setters write here and applySettings reads from here.
     function masterFile() {
         return root.overrideExists ? overrideFile : settingsFile
     }
@@ -242,8 +241,8 @@ PanelWindow {
     property int reservedHeight: Math.max(settings.bar.reservedHeight, settings.bar.height)
 
     // Whether the bar is shown. The "enabled" flag in statusbar.json is the
-    // single source of truth; it is toggled from the SidebarApp switch and via
-    // "qs ipc call statusbar toggle", persisted back to the file, and survives
+    // single source of truth; it is toggled via "qs ipc call statusbar toggle"
+    // (SUPER + CTRL + B), persisted back to the file, and survives
     // restarts. Kept as a binding so a settings reload updates it for free.
     property bool barEnabled: settings.bar.enabled
 
@@ -382,7 +381,7 @@ PanelWindow {
 
     Timer {
         id: mediaHoverOpenTimer
-        interval: 1000
+        interval: 400
         onTriggered: {
             if (root.mediaHoverInside && root.openPanel === "") {
                 root.mediaHoverOpen = true
@@ -619,10 +618,10 @@ PanelWindow {
         root.barExpanded = false
     }
 
-    // The calendar, power menu and sidebar used to be windows of their own,
-    // each with its own IPC target. They are panels of the bar now, but the
-    // targets are kept exactly as they were so the existing Hyprland
-    // keybindings — and the Sidebar's own buttons — keep working.
+    // The calendar and power menu used to be windows of their own, each with
+    // its own IPC target. They are panels of the bar now, but the targets are
+    // kept exactly as they were so existing keybindings and scripts keep
+    // working.
     IpcHandler {
         target: "calendar"
         function toggle(): void { root.togglePanel("calendar") }
@@ -682,12 +681,14 @@ PanelWindow {
         function isOpen(): bool { return root.openPanel === "clipboard" }
     }
 
+    // The sidebar was merged into the control centre. Its target is kept as an
+    // alias so old keybindings, aliases and scripts land in the right place.
     IpcHandler {
         target: "sidebar"
-        function toggle(): void { root.togglePanel("sidebar") }
-        function open(): void { root.openPanel = "sidebar" }
-        function close(): void { root.closePanel("sidebar") }
-        function isOpen(): bool { return root.openPanel === "sidebar" }
+        function toggle(): void { root.togglePanel("controlcentre") }
+        function open(): void { root.openPanel = "controlcentre" }
+        function close(): void { root.closePanel("controlcentre") }
+        function isOpen(): bool { return root.openPanel === "controlcentre" }
     }
 
     IpcHandler {
@@ -705,11 +706,10 @@ PanelWindow {
         // subcommand of "qs ipc" and would never reach the function.
         function enable(): void { root.setEnabled(true) }
         function disable(): void { root.setEnabled(false) }
-        // Persist and apply the alwaysExpanded (permanently expanded) mode,
-        // toggled from the SidebarApp switch.
+        // Persist and apply the alwaysExpanded (permanently expanded) mode.
         function alwaysExpand(): void { root.setAlwaysExpanded(true) }
         function autoCollapse(): void { root.setAlwaysExpanded(false) }
-        // Re-read statusbar.json from disk (used by the SidebarApp switch).
+        // Re-read statusbar.json from disk.
         function refresh(): void { root.reloadSettings() }
         // Expand the bar (if needed) and grab the keyboard for navigation.
         // Bound to SUPER + SPACE. Idempotent: when the bar is already expanded
@@ -729,8 +729,8 @@ PanelWindow {
         // instead of editing statusbar.json themselves.
         function weatherLocation(): string { return root.settings.weather.location }
         // The desktop time/weather widget. Off means it never appears and the
-        // bar's own clock stays out permanently. Toggled from the sidebar
-        // switch; the read returns "1" / "0" for a shell caller.
+        // bar's own clock stays out permanently. Toggled on the control
+        // centre's Appearance page; the read returns "1" / "0" for a shell caller.
         function weatherWidget(): string {
             return root.weatherWidgetEnabled ? "1" : "0"
         }
@@ -1038,8 +1038,8 @@ PanelWindow {
         // flare dropped so that edge runs straight on from the bar's.
         BarDropdown {
             id: wallpaperPanel
-            // Opened by a keybinding and by the sidebar, with no icon of its
-            // own, so it drops from the middle of the bar.
+            // Opened by a keybinding and from the control centre, with no icon
+            // of its own, so it drops from the middle of the bar.
             anchorItem: pill
             open: root.openPanel === "wallpaper"
             onDismissed: root.closePanel("wallpaper")
@@ -1080,11 +1080,13 @@ PanelWindow {
             open: root.openPanel === "controlcentre"
             onDismissed: root.closePanel("controlcentre")
             panelWidth: 420
-            panelHeight: 568
+            // Everything on one page, no scrolling; capped for short screens.
+            panelHeight: Math.min(714, root.screen.height - root.barHeight - 72)
             panelContent: Component {
                 ControlCentrePanel {
                     isOpen: root.openPanel === "controlcentre"
                     location: root.settings.weather.location
+                    weatherWidgetEnabled: root.weatherWidgetEnabled
                     onCloseRequested: root.closePanel("controlcentre")
                 }
             }
@@ -1132,28 +1134,8 @@ PanelWindow {
         }
 
         BarDropdown {
-            id: sidebarPanel
-            // The sidebar has no icon of its own — it is opened by a
-            // keybinding — so it drops from the middle of the bar, where both
-            // its flares land on the bar's flat underside.
-            anchorItem: pill
-            open: root.openPanel === "sidebar"
-            onDismissed: root.closePanel("sidebar")
-            panelWidth: 420
-            // As tall as it can be without running off the bottom of the
-            // screen; the panel's own scroll area carries the rest.
-            panelHeight: Math.min(760, root.screen.height - root.barHeight - 72)
-            panelContent: Component {
-                SidebarPanel {
-                    isOpen: root.openPanel === "sidebar"
-                    onCloseRequested: root.closePanel("sidebar")
-                }
-            }
-        }
-
-        BarDropdown {
             id: settingsPanel
-            // Opened from the sidebar and by IPC, with no icon of its own, so it
+            // Opened from the control centre and by IPC, with no icon of its own, so it
             // drops from the middle of the bar like the other wide panels.
             anchorItem: pill
             open: root.openPanel === "settings"

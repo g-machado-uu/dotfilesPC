@@ -88,7 +88,7 @@ alias bg='kitten @ set-background-opacity'
 alias ml4w-settings='qs ipc call settings toggle'
 alias ml4w-calendar='qs ipc call calendar toggle'
 alias ml4w-hyprland='flatpak run com.ml4w.hyprlandsettings'
-alias ml4w-sidebar='qs ipc call sidebar toggle'
+alias ml4w-sidebar='qs ipc call controlcentre toggle'
 
 # -----------------------------------------------------
 # Scripts

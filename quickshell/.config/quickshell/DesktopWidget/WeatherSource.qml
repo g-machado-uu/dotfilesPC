@@ -2,13 +2,13 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Weather for the desktop widget, from Open-Meteo (free, no key, no account).
+// Weather for the desktop widget and the control centre, from Open-Meteo (free,
+// no key, no account).
 //
-// The control centre fetches its own copy of roughly the same data; this one
-// is kept separate because it needs three extra current readings (humidity,
-// apparent temperature, wind) and a day more of forecast, and because the two
-// surfaces come and go independently — sharing one fetch would mean one of them
-// dictating when the other refreshes.
+// Each surface keeps its own instance rather than sharing one: they come and
+// go independently, and one of them should not dictate when the other
+// refreshes. Using the same component still means both show the same readings
+// in the same units.
 Item {
     id: src
 

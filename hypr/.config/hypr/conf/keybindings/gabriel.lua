@@ -237,8 +237,8 @@ hl.bind(
 )
 hl.bind(
 	mainMod .. " + CTRL + S",
-	hl.dsp.exec_cmd("qs ipc call sidebar toggle"),
-	{ description = "Open ML4W Sidebar widget" }
+	hl.dsp.exec_cmd("qs ipc call controlcentre toggle"),
+	{ description = "Open the control centre" }
 )
 hl.bind(
 	mainMod .. " + CTRL + C",

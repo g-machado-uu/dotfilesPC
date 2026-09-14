@@ -43,38 +43,6 @@ Item {
         onTriggered: progress.refresh()
     }
 
-    component TransportButton: Rectangle {
-        id: btn
-        property string iconSrc: ""
-        property real diameter: 34
-        signal activated()
-
-        implicitWidth: diameter
-        implicitHeight: diameter
-        radius: diameter / 2
-        color: btnMouse.containsMouse ? Theme.primary : "transparent"
-        border.color: Theme.primary
-        border.width: 1
-        Behavior on color {
-            ColorAnimation { duration: 180; easing.type: Easing.OutQuint }
-        }
-
-        IconGlyph {
-            anchors.centerIn: parent
-            source: btn.iconSrc
-            size: btn.diameter * 0.45
-            color: btnMouse.containsMouse ? Theme.background : Theme.primary
-        }
-
-        MouseArea {
-            id: btnMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: btn.activated()
-        }
-    }
-
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 16

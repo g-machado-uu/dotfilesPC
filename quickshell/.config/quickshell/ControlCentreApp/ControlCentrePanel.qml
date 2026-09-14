@@ -1,14 +1,22 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import QtQuick.Shapes
 import qs.CustomTheme
 import qs.shared
+import qs.DesktopWidget
 
-// The control centre that drops out of the sliders icon in the status bar:
-// shortcuts to the other panels, quick toggles, then the output and input levels, then the weather, and the
-// notification state last.
+// The control centre that drops out of the sliders icon in the status bar
+// (SUPER + CTRL + S). It also took over the old sidebar.
+//
+// Top to bottom, from what is changed most to what is only glanced at:
+// shortcuts to the other panels, quick toggles, the notification count, the
+// output and input levels, the way into the Appearance page, the weather, and
+// whatever is playing last. Media keeps a fixed slot at the bottom, so a
+// player appearing or disappearing never moves anything above it.
 //
 // This is only the content — the silhouette, translucency and drop animation
 // come from the BarPanel that hosts it.
@@ -16,7 +24,7 @@ Item {
     id: root
 
     readonly property real panelWidth: 420
-    readonly property real panelHeight: 568
+    readonly property real panelHeight: 714
 
     // Mirrors the hosting panel's state. Polling and animations only run while
     // the panel is actually on screen.
@@ -25,6 +33,8 @@ Item {
 
     // Place name to look up, e.g. "Belfast, UK". Set from the bar's settings.
     property string location: "Belfast, UK"
+    // Whether the desktop time/weather widget is on. Set from the bar.
+    property bool weatherWidgetEnabled: true
 
     // ------------------------------------------------------------------
     // TOGGLE STATE
@@ -37,10 +47,13 @@ Item {
     property bool dndOn: false
     property bool caffeineOn: false
     property bool nightLightOn: false
+    property bool gamemodeOn: false
     property int notificationCount: 0
 
-    // "" is the main page; "wifi" and "bluetooth" replace it with a picker.
+    // "" is the main page; "wifi", "bluetooth" and "appearance" replace it.
     property string page: ""
+
+    readonly property string home: Quickshell.env("HOME")
 
     Process {
         id: stateProc
@@ -50,11 +63,12 @@ Item {
             "d=$(swaync-client -D 2>/dev/null); " +
             "c=$(pgrep -x hypridle >/dev/null && echo 1 || echo 0); " +
             "n=$(pgrep -x hyprsunset >/dev/null && echo 1 || echo 0); " +
-            "echo \"${w:-disabled}|${b:-0}|${d:-false}|$c|$n\""]
+            "g=$([ -f \"$HOME/.config/ml4w/settings/gamemode-enabled\" ] && echo 1 || echo 0); " +
+            "echo \"${w:-disabled}|${b:-0}|${d:-false}|$c|$n|$g\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 let parts = this.text.trim().split("|")
-                if (parts.length < 5)
+                if (parts.length < 6)
                     return
                 root.wifiOn = parts[0].trim() === "enabled"
                 root.bluetoothOn = parseInt(parts[1]) > 0
@@ -63,6 +77,8 @@ Item {
                 // caffeine is the inverse of it.
                 root.caffeineOn = parts[3].trim() !== "1"
                 root.nightLightOn = parts[4].trim() === "1"
+                // gamemode.sh drops this flag file while gamemode is on.
+                root.gamemodeOn = parts[5].trim() === "1"
             }
         }
     }
@@ -150,156 +166,70 @@ Item {
 
     onIsOpenChanged: {
         if (root.isOpen) {
+            // The weather catches up by itself: `active` follows isOpen.
             root.pollState()
             root.pollAudio()
-            root.refreshWeather()
         } else {
-            // Always reopen on the main page, never mid-edit.
+            // Always reopen on the main page, never mid-edit, and back on the
+            // player that is actually playing.
             root.page = ""
             placeRow.editing = false
+            root.playerPick = -1
         }
     }
 
     // ------------------------------------------------------------------
-    // WEATHER (Open-Meteo: free, no key, no account)
+    // MEDIA
     // ------------------------------------------------------------------
-    property real latitude: NaN
-    property real longitude: NaN
-    property string resolvedPlace: ""
-    property bool weatherLoaded: false
-    property string weatherError: ""
+    // Same choice as the bar's media module: the player that is playing,
+    // otherwise the first one. With several players the counter on the card
+    // pins another one until the panel closes.
+    property int playerPick: -1
 
-    property int currentCode: 0
-    property bool currentIsDay: true
-    property real currentTemp: 0
-    property real todayMin: 0
-    property real todayMax: 0
-    // Two entries of { day, code, min, max } for the days after today.
-    property var forecast: []
+    readonly property var players: Mpris.players.values
 
-    function fmt(t: real): string {
-        return Math.round(t) + "°"
-    }
-
-    // The location is a free-text place name. Open-Meteo's geocoder takes a
-    // bare name, so anything after the first comma is treated as a country
-    // hint and used to pick between same-named places rather than being sent.
-    function geocode(): void {
-        let parts = root.location.split(",")
-        let name = parts[0].trim()
-        if (name === "")
-            return
-        geoProc.command = ["bash", "-c",
-            "curl -s --max-time 12 'https://geocoding-api.open-meteo.com/v1/search?name="
-            + encodeURIComponent(name) + "&count=10&language=en&format=json'"]
-        geoProc.running = false
-        geoProc.running = true
-    }
-
-    Process {
-        id: geoProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let hint = root.location.split(",").slice(1).join(",").trim().toLowerCase()
-                try {
-                    let res = JSON.parse(this.text).results
-                    if (!res || res.length === 0) {
-                        root.weatherError = "Location not found"
-                        return
-                    }
-                    let pick = res[0]
-                    if (hint !== "") {
-                        for (let i = 0; i < res.length; i++) {
-                            let r = res[i]
-                            let hay = [r.country, r.country_code, r.admin1]
-                                .filter(v => v !== undefined)
-                                .join(" ").toLowerCase()
-                            if (hay.indexOf(hint) >= 0) {
-                                pick = r
-                                break
-                            }
-                        }
-                    }
-                    root.latitude = pick.latitude
-                    root.longitude = pick.longitude
-                    root.resolvedPlace = pick.name
-                        + (pick.country_code ? ", " + pick.country_code : "")
-                    root.weatherError = ""
-                    root.fetchWeather()
-                } catch (e) {
-                    root.weatherError = "Could not reach the weather service"
-                }
-            }
+    readonly property var player: {
+        let list = root.players
+        if (root.playerPick >= 0 && root.playerPick < list.length)
+            return list[root.playerPick]
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].isPlaying)
+                return list[i]
         }
+        return list.length > 0 ? list[0] : null
     }
 
-    function fetchWeather(): void {
-        if (isNaN(root.latitude))
-            return
-        forecastProc.command = ["bash", "-c",
-            "curl -s --max-time 12 'https://api.open-meteo.com/v1/forecast?latitude="
-            + root.latitude + "&longitude=" + root.longitude
-            + "&current=temperature_2m,weather_code,is_day"
-            + "&daily=weather_code,temperature_2m_max,temperature_2m_min"
-            + "&timezone=auto&forecast_days=3'"]
-        forecastProc.running = false
-        forecastProc.running = true
+    readonly property int playerIndex: root.player ? root.players.indexOf(root.player) : -1
+
+    readonly property string artist: {
+        if (!root.player)
+            return ""
+        if (root.player.trackArtist)
+            return root.player.trackArtist
+        if (root.player.trackArtists && root.player.trackArtists.length > 0)
+            return root.player.trackArtists[0]
+        return root.player.identity ? root.player.identity : ""
     }
 
-    Process {
-        id: forecastProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    let d = JSON.parse(this.text)
-                    root.currentTemp = d.current.temperature_2m
-                    root.currentCode = d.current.weather_code
-                    root.currentIsDay = d.current.is_day === 1
-                    root.todayMax = d.daily.temperature_2m_max[0]
-                    root.todayMin = d.daily.temperature_2m_min[0]
-
-                    let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-                    let out = []
-                    for (let i = 1; i < d.daily.time.length && i < 3; i++) {
-                        out.push({
-                            "day": names[new Date(d.daily.time[i] + "T12:00:00").getDay()],
-                            "code": d.daily.weather_code[i],
-                            "min": d.daily.temperature_2m_min[i],
-                            "max": d.daily.temperature_2m_max[i]
-                        })
-                    }
-                    root.forecast = out
-                    root.weatherLoaded = true
-                    root.weatherError = ""
-                } catch (e) {
-                    root.weatherError = "Could not read the forecast"
-                }
-            }
-        }
-    }
-
-    // Re-geocode when the configured place changes, otherwise just re-fetch.
-    function refreshWeather(): void {
-        if (isNaN(root.latitude))
-            root.geocode()
-        else
-            root.fetchWeather()
-    }
-
-    onLocationChanged: {
-        root.latitude = NaN
-        root.weatherLoaded = false
-        root.geocode()
-    }
-
-    Component.onCompleted: root.geocode()
-
+    // Position only needs to tick while the card is actually on screen.
     Timer {
-        interval: 20 * 60 * 1000
+        interval: 1000
         repeat: true
-        running: true
-        triggeredOnStart: false
-        onTriggered: root.refreshWeather()
+        running: root.isOpen && root.page === "" && root.player !== null
+                 && root.player.isPlaying
+        onTriggered: mediaProgress.refresh()
+    }
+
+    // ------------------------------------------------------------------
+    // WEATHER
+    // ------------------------------------------------------------------
+    // The same source the desktop widget uses (Open-Meteo), so the two always
+    // show the same readings, in the same units. It re-geocodes by itself when
+    // `location` changes and catches up whenever the panel opens.
+    WeatherSource {
+        id: weather
+        location: root.location
+        active: root.isOpen
     }
 
     // ------------------------------------------------------------------
@@ -320,7 +250,8 @@ Item {
         opacity: 0.7
     }
 
-    // A quick-toggle tile: icon over label, filled when the thing is on.
+    // A quick-toggle tile: icon over label, filled when the thing is on. Every
+    // tile is an on/off state; one-off actions live elsewhere as pills.
     component Tile: Rectangle {
         id: tile
         property string iconSrc: ""
@@ -438,7 +369,77 @@ Item {
         }
     }
 
-    // A labelled level slider, styled like the ones in the sidebar.
+    // The wind dart, drawn the way the desktop widget draws it: pointing along
+    // the bearing the wind blows *from*, as a METAR reports it.
+    component WindArrow: Shape {
+        id: arrow
+        property real bearing: 0
+        property real glyphSize: 10
+
+        implicitWidth: glyphSize
+        implicitHeight: glyphSize
+        preferredRendererType: Shape.GeometryRenderer
+
+        transform: Rotation {
+            origin.x: arrow.glyphSize / 2
+            origin.y: arrow.glyphSize / 2
+            angle: arrow.bearing
+        }
+
+        ShapePath {
+            fillColor: Theme.primary
+            strokeWidth: -1
+            startX: arrow.glyphSize * 0.5; startY: 0
+            PathLine { x: arrow.glyphSize * 0.95; y: arrow.glyphSize }
+            PathLine { x: arrow.glyphSize * 0.5;  y: arrow.glyphSize * 0.7 }
+            PathLine { x: arrow.glyphSize * 0.05; y: arrow.glyphSize }
+            PathLine { x: arrow.glyphSize * 0.5;  y: 0 }
+        }
+    }
+
+    // One reading in the weather details card: a small label over its value,
+    // styled like the MIN / MAX pair beside the temperature.
+    component WeatherStat: ColumnLayout {
+        id: stat
+        property string label: ""
+        property string value: ""
+        // Wind only: shows the dart before the label.
+        property bool showArrow: false
+        property real bearing: 0
+
+        Layout.fillWidth: true
+        Layout.preferredWidth: 1
+        spacing: 1
+
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 4
+
+            WindArrow {
+                Layout.alignment: Qt.AlignVCenter
+                visible: stat.showArrow
+                bearing: stat.bearing
+                opacity: weather.loaded ? 0.8 : 0
+            }
+            Text {
+                text: stat.label
+                color: Theme.primary
+                opacity: 0.6
+                font.family: Theme.fontFamily
+                font.pixelSize: 10
+                font.bold: true
+            }
+        }
+        Text {
+            Layout.alignment: Qt.AlignHCenter
+            text: stat.value
+            color: Theme.on_background
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+        }
+    }
+
+    // A labelled level slider.
     component LevelSlider: RowLayout {
         id: lvl
         property string iconSrc: ""
@@ -531,38 +532,34 @@ Item {
         }
 
         // --- SHORTCUTS ---
-        // The panels that otherwise only open from a keybinding.
+        // Only other panels live here; pages inside the control centre are
+        // reached through chevrons instead, so the two never look alike.
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: -4
             spacing: 4
 
             SectionLabel {
-                Layout.fillWidth: true
-                text: sidebarShortcut.hovered ? sidebarShortcut.hint
+                readonly property string hint: wallpaperShortcut.hovered ? wallpaperShortcut.hint
                     : settingsShortcut.hovered ? settingsShortcut.hint
-                    : wallpaperShortcut.hovered ? wallpaperShortcut.hint
                     : ""
+                Layout.fillWidth: true
+                text: hint !== "" ? hint : "CONTROL CENTRE"
+                opacity: hint !== "" ? 0.7 : 0.4
                 elide: Text.ElideRight
             }
 
             ShortcutButton {
-                id: sidebarShortcut
-                iconSrc: "../shared/icons/sidebar.svg"
-                hint: "SIDEBAR · SUPER+CTRL+S"
-                command: "qs ipc call sidebar toggle"
+                id: wallpaperShortcut
+                iconSrc: "../shared/icons/wallpaper.svg"
+                hint: "WALLPAPERS · SUPER+CTRL+W"
+                command: "$HOME/.config/ml4w/scripts/ml4w-wallpaper-app"
             }
             ShortcutButton {
                 id: settingsShortcut
                 iconSrc: "../shared/icons/settings.svg"
                 hint: "SETTINGS · SUPER+SHIFT+S"
                 command: "qs ipc call settings toggle"
-            }
-            ShortcutButton {
-                id: wallpaperShortcut
-                iconSrc: "../shared/icons/wallpaper.svg"
-                hint: "WALLPAPERS · SUPER+CTRL+W"
-                command: "$HOME/.config/ml4w/scripts/ml4w-wallpaper-app"
             }
         }
 
@@ -603,28 +600,72 @@ Item {
                 // ML4W's own script already toggles hypridle and reports back,
                 // so screen locking keeps working the way the rest of the
                 // desktop expects.
-                onActivated: root.run(Quickshell.env("HOME")
-                    + "/.config/hypr/scripts/hypridle.sh toggle")
+                onActivated: root.run(root.home + "/.config/hypr/scripts/hypridle.sh toggle")
             }
             Tile {
                 iconSrc: "../shared/icons/moon.svg"
                 label: "Night Light"
                 on: root.nightLightOn
-                onActivated: root.run(root.nightLightOn
-                    ? "pkill -x hyprsunset"
-                    : "hyprsunset >/dev/null 2>&1 &")
+                // The same script SUPER + SHIFT + H runs.
+                onActivated: root.run(root.home + "/.config/ml4w/scripts/ml4w-toggle-hyprsunset")
             }
             Tile {
-                iconSrc: "../shared/icons/clear-all.svg"
-                label: "Clear"
+                iconSrc: "../shared/icons/gamepad.svg"
+                label: "Gamemode"
+                on: root.gamemodeOn
+                // The same script SUPER + ALT + G runs: animations and blur
+                // off, wallpaper automation paused.
+                onActivated: root.run(root.home + "/.config/hypr/scripts/gamemode.sh")
+            }
+        }
+
+        // --- NOTIFICATIONS ---
+        // Next to Do Not Disturb, which decides whether this count grows.
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            SectionLabel { text: "NOTIFICATIONS" }
+
+            Rectangle {
+                visible: root.notificationCount > 0
+                implicitWidth: Math.max(20, countText.implicitWidth + 12)
+                implicitHeight: 18
+                radius: 9
+                color: Theme.primary
+                Text {
+                    id: countText
+                    anchors.centerIn: parent
+                    text: root.notificationCount
+                    color: Theme.background
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            PillButton {
+                text: "Clear all"
+                enabled: root.notificationCount > 0
                 onActivated: root.run("swaync-client -C")
+            }
+
+            // swaync owns the notification list and does not expose it over
+            // D-Bus, so the list itself stays in its own panel; this opens it.
+            PillButton {
+                text: "Open"
+                onActivated: {
+                    Quickshell.execDetached(["swaync-client", "-t", "-sw"])
+                    root.closeRequested()
+                }
             }
         }
 
         // --- OUTPUT AND INPUT LEVELS ---
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 2
             spacing: 8
 
             LevelSlider {
@@ -653,6 +694,65 @@ Item {
                 minimum: 5
                 setCommand: "brightnessctl set %1%"
                 onValueChanged: root.brightnessLevel = value
+            }
+        }
+
+        // --- APPEARANCE ---
+        // A row, not a tile: it opens a page rather than switching something,
+        // and it says what is behind it.
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 38
+            radius: 12
+            color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b,
+                           appearanceMouse.containsMouse ? 0.18 : 0.10)
+            Behavior on color {
+                ColorAnimation { duration: 180; easing.type: Easing.OutQuint }
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 8
+                spacing: 10
+
+                IconGlyph {
+                    Layout.alignment: Qt.AlignVCenter
+                    source: "../shared/icons/theme.svg"
+                    size: 17
+                    color: Theme.primary
+                }
+                Text {
+                    text: "Appearance"
+                    color: Theme.primary
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.bold: true
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "Dark style, GTK & Qt, weather widget"
+                    color: Theme.on_background
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    opacity: 0.7
+                    elide: Text.ElideRight
+                }
+                IconGlyph {
+                    Layout.alignment: Qt.AlignVCenter
+                    source: "../shared/icons/chevron-right.svg"
+                    size: 14
+                    color: Theme.primary
+                    opacity: 0.75
+                }
+            }
+
+            MouseArea {
+                id: appearanceMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.page = "appearance"
             }
         }
 
@@ -692,8 +792,8 @@ Item {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !placeRow.editing
-                text: (root.resolvedPlace !== "" ? root.resolvedPlace
-                                                 : root.location).toUpperCase()
+                text: (weather.place !== "" ? weather.place
+                                            : root.location).toUpperCase()
                 opacity: placeMouse.containsMouse ? 1 : 0.7
             }
 
@@ -746,10 +846,10 @@ Item {
             WeatherIcon {
                 Layout.alignment: Qt.AlignVCenter
                 size: 54
-                code: root.currentCode
-                night: !root.currentIsDay
+                code: weather.code
+                night: !weather.isDay
                 animate: root.isOpen
-                opacity: root.weatherLoaded ? 1 : 0.35
+                opacity: weather.loaded ? 1 : 0.35
             }
 
             ColumnLayout {
@@ -757,15 +857,15 @@ Item {
                 spacing: 0
 
                 Text {
-                    text: root.weatherLoaded ? root.fmt(root.currentTemp) : "--°"
+                    text: weather.loaded ? weather.fmt(weather.temperature) : "--°"
                     color: Theme.primary
                     font.family: Theme.fontFamily
                     font.pixelSize: 30
                     font.bold: true
                 }
                 Text {
-                    text: root.weatherError !== "" ? root.weatherError
-                        : (root.weatherLoaded ? weatherGlyph.label : "Loading…")
+                    text: weather.error !== "" ? weather.error
+                        : (weather.loaded ? weatherGlyph.label : "Loading…")
                     color: Theme.on_background
                     font.family: Theme.fontFamily
                     font.pixelSize: 12
@@ -788,7 +888,7 @@ Item {
                         font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true
                     }
                     Text {
-                        text: root.weatherLoaded ? root.fmt(root.todayMin) : "--°"
+                        text: weather.loaded ? weather.fmt(weather.todayMin) : "--°"
                         color: Theme.on_background
                         font.family: Theme.fontFamily; font.pixelSize: 13
                     }
@@ -801,7 +901,7 @@ Item {
                         font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true
                     }
                     Text {
-                        text: root.weatherLoaded ? root.fmt(root.todayMax) : "--°"
+                        text: weather.loaded ? weather.fmt(weather.todayMax) : "--°"
                         color: Theme.on_background
                         font.family: Theme.fontFamily; font.pixelSize: 13
                     }
@@ -815,28 +915,64 @@ Item {
             id: weatherGlyph
             visible: false
             animate: false
-            code: root.currentCode
+            code: weather.code
         }
 
-        // --- NEXT TWO DAYS ---
+        // --- DETAILS ---
+        // The rest of the readings the desktop widget shows, in one card.
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 46
+            radius: 10
+            color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.10)
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                spacing: 4
+
+                WeatherStat {
+                    label: "FEELS LIKE"
+                    value: weather.loaded ? weather.fmt(weather.apparent) : "--°"
+                }
+                WeatherStat {
+                    label: "HUMIDITY"
+                    value: weather.loaded ? weather.humidity + "%" : "--%"
+                }
+                WeatherStat {
+                    label: "WIND"
+                    value: weather.loaded ? weather.windMetar : "--"
+                    showArrow: true
+                    bearing: weather.windDirection
+                }
+                WeatherStat {
+                    label: "QNH"
+                    value: weather.loaded ? Math.round(weather.pressure) + " hPa" : "--"
+                }
+            }
+        }
+
+        // --- NEXT THREE DAYS ---
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 8
 
             Repeater {
-                model: root.forecast
+                model: weather.forecast
 
                 Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
+                    Layout.preferredWidth: 1
                     implicitHeight: 52
                     radius: 10
                     color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.10)
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 8
                         spacing: 8
 
                         WeatherIcon {
@@ -857,7 +993,7 @@ Item {
                                 font.bold: true
                             }
                             Text {
-                                text: root.fmt(modelData.min) + " / " + root.fmt(modelData.max)
+                                text: weather.fmt(modelData.min) + " / " + weather.fmt(modelData.max)
                                 color: Theme.on_background
                                 font.family: Theme.fontFamily
                                 font.pixelSize: 12
@@ -870,88 +1006,184 @@ Item {
 
             // Keeps the row's height while the forecast is still loading.
             Item {
-                visible: root.forecast.length === 0
+                visible: weather.forecast.length === 0
                 Layout.fillWidth: true
                 implicitHeight: 52
             }
         }
 
+        // Any spare height goes here, so media stays pinned to the bottom.
+        Item { Layout.fillHeight: true }
+
         Divider {}
 
-        // --- NOTIFICATIONS ---
-        RowLayout {
+        // --- MEDIA ---
+        // Always the last item and always the same height: with nothing
+        // playing it says so and dims its controls instead of collapsing.
+        Rectangle {
             Layout.fillWidth: true
-            spacing: 8
+            implicitHeight: 76
+            radius: 12
+            color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.10)
+            clip: true
 
-            SectionLabel { text: "NOTIFICATIONS" }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 12
 
-            Rectangle {
-                visible: root.notificationCount > 0
-                implicitWidth: Math.max(20, countText.implicitWidth + 12)
-                implicitHeight: 18
-                radius: 9
-                color: Theme.primary
-                Text {
-                    id: countText
-                    anchors.centerIn: parent
-                    text: root.notificationCount
-                    color: Theme.background
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 11
-                    font.bold: true
+                // Album art when the player offers it, a note glyph when not.
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: 56
+                    implicitHeight: 56
+                    radius: 8
+                    color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.14)
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        source: (root.player && root.player.trackArtUrl)
+                            ? root.player.trackArtUrl : ""
+                        visible: source !== ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                    }
+
+                    IconGlyph {
+                        anchors.centerIn: parent
+                        visible: !root.player || !root.player.trackArtUrl
+                        source: "../shared/icons/music.svg"
+                        size: 22
+                        color: Theme.primary
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 2
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.player
+                                ? (root.player.trackTitle ? root.player.trackTitle : "Playing")
+                                : "Nothing playing"
+                            elide: Text.ElideRight
+                            color: Theme.primary
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
+
+                        // Only with more than one player: which one this is,
+                        // and a click moves to the next.
+                        Rectangle {
+                            visible: root.players.length > 1
+                            implicitWidth: pickText.implicitWidth + 12
+                            implicitHeight: 18
+                            radius: 9
+                            color: pickMouse.containsMouse ? Theme.primary : "transparent"
+                            border.color: Theme.primary
+                            border.width: 1
+                            Text {
+                                id: pickText
+                                anchors.centerIn: parent
+                                text: (root.playerIndex + 1) + "/" + root.players.length
+                                color: pickMouse.containsMouse ? Theme.background : Theme.primary
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                font.bold: true
+                            }
+                            MouseArea {
+                                id: pickMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.playerPick =
+                                    (root.playerIndex + 1) % root.players.length
+                            }
+                        }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.player ? root.artist : "Start something to control it here"
+                        elide: Text.ElideRight
+                        color: Theme.on_background
+                        opacity: 0.8
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                    }
+                }
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 8
+
+                    TransportButton {
+                        diameter: 28
+                        iconSrc: "../shared/icons/skip-back.svg"
+                        enabled: root.player !== null
+                        onActivated: if (root.player) root.player.previous()
+                    }
+                    TransportButton {
+                        diameter: 34
+                        iconSrc: (root.player && root.player.isPlaying)
+                            ? "../shared/icons/pause.svg" : "../shared/icons/play.svg"
+                        enabled: root.player !== null
+                        onActivated: if (root.player) root.player.isPlaying = !root.player.isPlaying
+                    }
+                    TransportButton {
+                        diameter: 28
+                        iconSrc: "../shared/icons/skip-forward.svg"
+                        enabled: root.player !== null
+                        onActivated: if (root.player) root.player.next()
+                    }
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            // Progress along the bottom edge. Players that do not report a
+            // length simply show none.
+            Item {
+                id: mediaProgress
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                anchors.bottomMargin: 4
+                height: 3
+                visible: root.player !== null && root.player.length > 0
 
-            // swaync owns the notification list and does not expose it over
-            // D-Bus, so the list itself stays in its own panel; this opens it.
-            Rectangle {
-                implicitWidth: openText.implicitWidth + 22
-                implicitHeight: 26
-                radius: 13
-                color: openMouse.containsMouse ? Theme.primary : "transparent"
-                border.color: Theme.primary
-                border.width: 1
-                Behavior on color {
-                    ColorAnimation { duration: 180; easing.type: Easing.OutQuint }
+                property real fraction: 0
+                function refresh(): void {
+                    mediaProgress.fraction = (root.player && root.player.length > 0)
+                        ? Math.min(1, root.player.position / root.player.length)
+                        : 0
                 }
-                Text {
-                    id: openText
-                    anchors.centerIn: parent
-                    text: root.notificationCount > 0 ? "Show" : "Open"
-                    color: openMouse.containsMouse ? Theme.background : Theme.primary
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 12
-                }
-                MouseArea {
-                    id: openMouse
+
+                Rectangle {
                     anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        Quickshell.execDetached(["swaync-client", "-t", "-sw"])
-                        root.closeRequested()
+                    radius: 2
+                    color: Theme.primary
+                    opacity: 0.2
+                }
+                Rectangle {
+                    width: parent.width * mediaProgress.fraction
+                    height: parent.height
+                    radius: 2
+                    color: Theme.primary
+                    Behavior on width {
+                        NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
                     }
                 }
             }
         }
-
-        Text {
-            Layout.fillWidth: true
-            text: root.dndOn
-                ? "Do Not Disturb is on — notifications are being held back."
-                : (root.notificationCount > 0
-                    ? root.notificationCount + " waiting in the notification centre."
-                    : "Nothing waiting.")
-            color: Theme.on_background
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            opacity: 0.7
-            wrapMode: Text.WordWrap
-        }
-
-        Item { Layout.fillHeight: true }
     }
 
     // ------------------------------------------------------------------
@@ -985,5 +1217,19 @@ Item {
         }
         onBack: root.page = ""
         onToggleRadio: root.run("bluetoothctl power " + (root.bluetoothOn ? "off" : "on"))
+    }
+
+    AppearancePage {
+        anchors.fill: parent
+        anchors.margins: 16
+        active: root.page === "appearance" && root.isOpen
+        weatherWidgetOn: root.weatherWidgetEnabled
+        visible: opacity > 0
+        opacity: root.page === "appearance" ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation { duration: 140; easing.type: Easing.OutQuint }
+        }
+        onBack: root.page = ""
+        onCloseRequested: root.closeRequested()
     }
 }
