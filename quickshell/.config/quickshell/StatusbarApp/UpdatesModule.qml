@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
 import qs.CustomTheme
+import qs.shared
 
 // Shows the number of pending system updates next to a package icon. The count
 // comes from ml4w-check-system-updates (the same script the Waybar module
@@ -123,13 +124,11 @@ Rectangle {
         onTriggered: updates.refresh()
     }
 
-    // Let external scripts drive the module via `qs ipc call updates ...`.
-    // `reset` clears the count immediately (e.g. right after an update run,
-    // so the module hides itself without waiting for the next poll); `refresh`
-    // re-runs the check script on demand.
-    IpcHandler {
-        target: "updates"
-        function reset(): void { updates.count = 0 }
-        function refresh(): void { updates.refresh() }
+    // `qs ipc call updates reset|refresh`, registered once in UpdatesIpc and
+    // delivered to the module on every bar.
+    Connections {
+        target: UpdatesIpc
+        function onReset(): void { updates.count = 0 }
+        function onRefresh(): void { updates.refresh() }
     }
 }

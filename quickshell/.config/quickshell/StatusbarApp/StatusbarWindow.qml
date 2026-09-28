@@ -15,6 +15,7 @@ import qs.ControlCentreApp
 import qs.MediaApp
 import qs.WallpaperApp
 import qs.SettingsApp
+import qs.SoundApp
 
 PanelWindow {
     id: root
@@ -84,6 +85,10 @@ PanelWindow {
     // off so a missing override does not log an error on every startup/reload.
     FileView {
         id: overrideFile
+        // Every bar reads the file, but only the focused one writes it (via
+        // IPC), so the others follow the change from disk.
+        watchChanges: true
+        onFileChanged: reload()
         path: Quickshell.env("HOME") + "/.config/ml4w-statusbar/statusbar.json"
         blockLoading: true
         printErrors: false
@@ -92,11 +97,14 @@ PanelWindow {
     }
 
     // Shipped fallback holding the dynamic state (enabled / alwaysExpanded), used
-    // only when the override file is absent. Changes are not picked up
-    // automatically; trigger a re-read explicitly with
-    //   qs ipc call statusbar reload
+    // only when the override file is absent. Changes on disk are picked up
+    // automatically; "qs ipc call statusbar reload" forces a re-read.
     FileView {
         id: settingsFile
+        // Every bar reads the file, but only the focused one writes it (via
+        // IPC), so the others follow the change from disk.
+        watchChanges: true
+        onFileChanged: reload()
         path: Quickshell.env("HOME") + "/.config/ml4w/settings/statusbar.json"
         blockLoading: true
         onLoaded: root.applySettings()
@@ -271,6 +279,29 @@ PanelWindow {
     // both on screen. The handover timing lives in the widget.
     property bool hideClock: false
 
+    // --- MULTI-MONITOR ---
+    // shell.qml creates one bar per screen. The primary one shares its screen
+    // with the desktop widget.
+    property bool isPrimary: true
+    // This bar's Hyprland monitor, used to show only its own workspaces.
+    readonly property var hyprMonitor: Hyprland.monitorFor(root.screen)
+    // Only the bar on the focused monitor answers IPC, so keybindings (panels,
+    // SUPER + SPACE) act on the screen you are working on, and each target is
+    // registered once rather than once per bar.
+    readonly property bool ipcActive: Hyprland.focusedMonitor === Hyprland.monitorFor(root.screen)
+    // What the handlers actually follow. Switching off is immediate, switching
+    // on waits a tick, so when focus moves the old bar has always released a
+    // target before the new one claims it. Otherwise the new one can register
+    // first, and Quickshell logs a conflict for every target on every switch.
+    property bool ipcEnabled: false
+    onIpcActiveChanged: syncIpc()
+    function syncIpc(): void {
+        if (!root.ipcActive)
+            root.ipcEnabled = false
+        else
+            Qt.callLater(() => root.ipcEnabled = root.ipcActive)
+    }
+
     // When set in statusbar.json the pill never collapses: it stays in its
     // expanded (full-width) state independent of hover or the IPC toggle. This
     // is purely visual — unlike barExpanded it does not grab the keyboard — so
@@ -303,6 +334,7 @@ PanelWindow {
         WorkspacesModule {
             minWorkspaces: root.settings.workspaces.count
             showAppIcons: root.settings.workspaces.showAppIcons
+            monitor: root.hyprMonitor
         }
     }
     Component { id: cLauncher;   LauncherModule {} }
@@ -436,7 +468,12 @@ PanelWindow {
             onClicked: root.togglePanel("power")
         }
     }
-    Component { id: cVolume;     VolumeModule {} }
+    Component {
+        id: cVolume
+        VolumeModule {
+            onClicked: root.togglePanel("sound")
+        }
+    }
     Component {
         id: cUpdates
         UpdatesModule {
@@ -564,7 +601,10 @@ PanelWindow {
         root.moduleRefs = refs
     }
 
-    Component.onCompleted: Qt.callLater(rebuildNavItems)
+    Component.onCompleted: {
+        Qt.callLater(rebuildNavItems)
+        syncIpc()
+    }
     onSettingsChanged: Qt.callLater(rebuildNavItems)
 
     // Highlight exactly the item at focusIndex and clear all others. Called
@@ -623,6 +663,7 @@ PanelWindow {
     // kept exactly as they were so existing keybindings and scripts keep
     // working.
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "calendar"
         function toggle(): void { root.togglePanel("calendar") }
         function open(): void { root.openPanel = "calendar" }
@@ -631,6 +672,7 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "power"
         function toggle(): void { root.togglePanel("power") }
         function open(): void { root.openPanel = "power" }
@@ -639,6 +681,7 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "wallpaper"
         function toggle(): void { root.togglePanel("wallpaper") }
         function open(): void { root.openPanel = "wallpaper" }
@@ -647,6 +690,7 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "media"
         function toggle(): void { root.togglePanel("media") }
         function open(): void { root.openPanel = "media" }
@@ -655,6 +699,7 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "controlcentre"
         function toggle(): void { root.togglePanel("controlcentre") }
         function open(): void { root.openPanel = "controlcentre" }
@@ -666,6 +711,7 @@ PanelWindow {
     // notification list. Kept so existing keybindings and scripts still reach
     // it under the old name.
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "notifications"
         function toggle(): void { root.togglePanel("controlcentre") }
         function open(): void { root.openPanel = "controlcentre" }
@@ -674,6 +720,16 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
+        target: "sound"
+        function toggle(): void { root.togglePanel("sound") }
+        function open(): void { root.openPanel = "sound" }
+        function close(): void { root.closePanel("sound") }
+        function isOpen(): bool { return root.openPanel === "sound" }
+    }
+
+    IpcHandler {
+        enabled: root.ipcEnabled
         target: "clipboard"
         function toggle(): void { root.togglePanel("clipboard") }
         function open(): void { root.openPanel = "clipboard" }
@@ -684,6 +740,7 @@ PanelWindow {
     // The sidebar was merged into the control centre. Its target is kept as an
     // alias so old keybindings, aliases and scripts land in the right place.
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "sidebar"
         function toggle(): void { root.togglePanel("controlcentre") }
         function open(): void { root.openPanel = "controlcentre" }
@@ -692,6 +749,7 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "settings"
         function toggle(): void { root.togglePanel("settings") }
         function open(): void { root.openPanel = "settings" }
@@ -700,6 +758,7 @@ PanelWindow {
     }
 
     IpcHandler {
+        enabled: root.ipcEnabled
         target: "statusbar"
         function toggle(): void { root.setEnabled(!root.settings.bar.enabled) }
         // Named enable/disable rather than show/hide: "show" is a reserved
@@ -1088,6 +1147,7 @@ PanelWindow {
                     location: root.settings.weather.location
                     weatherWidgetEnabled: root.weatherWidgetEnabled
                     onCloseRequested: root.closePanel("controlcentre")
+                    onSoundRequested: root.openPanel = "sound"
                 }
             }
         }
@@ -1129,6 +1189,24 @@ PanelWindow {
                 PowerPanel {
                     padding: pill.edgeMargin
                     onActionTaken: root.closePanel("power")
+                }
+            }
+        }
+
+        BarDropdown {
+            id: soundPanel
+            // Opened from the bar's speaker and from the control centre's, so
+            // it drops from the middle of the bar like the control centre it
+            // is reached from.
+            anchorItem: pill
+            open: root.openPanel === "sound"
+            onDismissed: root.closePanel("sound")
+            panelWidth: 420
+            panelHeight: Math.min(620, root.screen.height - root.barHeight - 72)
+            panelContent: Component {
+                SoundPanel {
+                    isOpen: root.openPanel === "sound"
+                    onCloseRequested: root.closePanel("sound")
                 }
             }
         }

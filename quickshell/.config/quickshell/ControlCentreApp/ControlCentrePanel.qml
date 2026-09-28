@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -30,6 +31,10 @@ Item {
     // the panel is actually on screen.
     property bool isOpen: false
     signal closeRequested()
+    // The speaker icon: the bar hosting this panel swaps it for the sound
+    // panel. A signal rather than IPC, so with a bar per monitor it opens on
+    // the bar that was clicked, not on the focused monitor's.
+    signal soundRequested()
 
     // Place name to look up, e.g. "Belfast, UK". Set from the bar's settings.
     property string location: "Belfast, UK"
@@ -110,6 +115,21 @@ Item {
                     root.brightnessLevel = parseInt(parts[2]) || 0
             }
         }
+    }
+
+    // Mute states come from the PipeWire service instead, so the icons flip
+    // the moment either is muted, from here or anywhere else.
+    readonly property PwNode speakerNode: Pipewire.defaultAudioSink
+    readonly property PwNode micNode: Pipewire.defaultAudioSource
+    readonly property bool speakerMuted: speakerNode !== null && speakerNode.audio !== null
+        && speakerNode.audio.muted
+    readonly property bool micMuted: micNode !== null && micNode.audio !== null
+        && micNode.audio.muted
+
+    PwObjectTracker {
+        objects: root.isOpen
+            ? [root.speakerNode, root.micNode].filter(n => n !== null)
+            : []
     }
 
     function pollAudio(): void {
@@ -439,7 +459,8 @@ Item {
         }
     }
 
-    // A labelled level slider.
+    // A labelled level slider. With iconClickable the icon becomes a round
+    // button that fills with the accent on hover and raises iconClicked().
     component LevelSlider: RowLayout {
         id: lvl
         property string iconSrc: ""
@@ -447,17 +468,43 @@ Item {
         property int minimum: 0
         // Shell command template; %1 is replaced with the new percentage.
         property string setCommand: ""
+        property bool iconClickable: false
+        // Muted: the slider dims but keeps its level, as PipeWire does.
+        property bool dimmed: false
+        signal iconClicked()
 
         readonly property alias pressed: slider.pressed
 
         Layout.fillWidth: true
-        spacing: 12
+        spacing: 8
 
-        IconGlyph {
+        Rectangle {
             Layout.alignment: Qt.AlignVCenter
-            source: lvl.iconSrc
-            size: 18
-            color: Theme.primary
+            implicitWidth: 30
+            implicitHeight: 30
+            radius: 15
+            color: (lvl.iconClickable && iconMouse.containsMouse)
+                ? Theme.primary : "transparent"
+            Behavior on color {
+                ColorAnimation { duration: 180; easing.type: Easing.OutQuint }
+            }
+
+            IconGlyph {
+                anchors.centerIn: parent
+                source: lvl.iconSrc
+                size: 18
+                color: (lvl.iconClickable && iconMouse.containsMouse)
+                    ? Theme.background : Theme.primary
+            }
+
+            MouseArea {
+                id: iconMouse
+                anchors.fill: parent
+                enabled: lvl.iconClickable
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: lvl.iconClicked()
+            }
         }
 
         Slider {
@@ -466,6 +513,10 @@ Item {
             from: lvl.minimum
             to: 100
             value: lvl.value
+            opacity: lvl.dimmed ? 0.45 : 1
+            Behavior on opacity {
+                NumberAnimation { duration: 180; easing.type: Easing.OutQuint }
+            }
 
             onMoved: {
                 lvl.value = Math.round(value)
@@ -507,9 +558,9 @@ Item {
 
         Text {
             Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: 34
+            Layout.preferredWidth: 38
             horizontalAlignment: Text.AlignRight
-            text: lvl.value + "%"
+            text: lvl.dimmed ? "Muted" : lvl.value + "%"
             color: Theme.on_background
             font.family: Theme.fontFamily
             font.pixelSize: 12
@@ -668,22 +719,36 @@ Item {
             Layout.fillWidth: true
             spacing: 8
 
+            // The speaker opens the sound panel (devices and per-app volume),
+            // which takes this panel's place under the bar.
             LevelSlider {
                 id: volumeSlider
-                iconSrc: root.volumeLevel > 0 ? "../shared/icons/volume.svg"
-                                              : "../shared/icons/volume-muted.svg"
+                iconSrc: (root.volumeLevel > 0 && !root.speakerMuted)
+                    ? "../shared/icons/volume.svg"
+                    : "../shared/icons/volume-muted.svg"
                 value: root.volumeLevel
+                dimmed: root.speakerMuted
                 setCommand: "wpctl set-volume @DEFAULT_AUDIO_SINK@ %1%"
                 onValueChanged: root.volumeLevel = value
+                iconClickable: true
+                onIconClicked: root.soundRequested()
             }
 
+            // The microphone icon mutes and unmutes.
             LevelSlider {
                 id: micSlider
-                iconSrc: root.micLevel > 0 ? "../shared/icons/mic.svg"
-                                           : "../shared/icons/mic-off.svg"
+                iconSrc: (root.micLevel > 0 && !root.micMuted)
+                    ? "../shared/icons/mic.svg"
+                    : "../shared/icons/mic-off.svg"
                 value: root.micLevel
+                dimmed: root.micMuted
                 setCommand: "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ %1%"
                 onValueChanged: root.micLevel = value
+                iconClickable: root.micNode !== null
+                onIconClicked: {
+                    if (root.micNode && root.micNode.audio)
+                        root.micNode.audio.muted = !root.micNode.audio.muted
+                }
             }
 
             LevelSlider {

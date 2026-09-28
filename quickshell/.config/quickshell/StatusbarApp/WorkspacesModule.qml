@@ -25,6 +25,17 @@ RowLayout {
     // module renders plain numbers, as it did before.
     property bool showAppIcons: true
 
+    // The Hyprland monitor of the bar this module sits in. Each bar lists only
+    // the workspaces on its own monitor, plus the empty numbers no monitor
+    // holds yet (clicking one of those opens it here). Null shows every
+    // workspace, as before.
+    property var monitor: null
+
+    // Whether a live workspace belongs on this bar.
+    function isOwn(ws): bool {
+        return !wsRoot.monitor || !ws.monitor || ws.monitor === wsRoot.monitor
+    }
+
     // Window classes that are terminals. A terminal's class says nothing about
     // what is actually running in it, so for these the *process tree* under the
     // window is inspected instead (see foregroundApp) — that is what turns a
@@ -91,8 +102,13 @@ RowLayout {
 
     function rebuildNavButtons(): void {
         let a = []
-        for (let i = 0; i < rep.count; i++)
-            a.push(rep.itemAt(i))
+        // Skips buttons not created yet: this runs as each one is added, so
+        // mid-build the later slots are still null.
+        for (let i = 0; i < rep.count; i++) {
+            const b = rep.itemAt(i)
+            if (b)
+                a.push(b)
+        }
         wsRoot.navButtons = a
     }
 
@@ -271,16 +287,24 @@ RowLayout {
     }
 
     // The workspace ids to render: 1..N, where N is at least minWorkspaces and
-    // extends to cover the highest-numbered workspace that currently exists.
+    // extends to cover the highest-numbered workspace on this monitor. Ids that
+    // live on another monitor are left out.
     readonly property var workspaceIds: {
         let maxId = Math.max(1, wsRoot.minWorkspaces)
+        let elsewhere = ({})
         const list = Hyprland.workspaces.values
-        for (let i = 0; i < list.length; i++)
-            if (list[i].id > maxId)
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id < 1)
+                continue
+            if (!wsRoot.isOwn(list[i]))
+                elsewhere[list[i].id] = true
+            else if (list[i].id > maxId)
                 maxId = list[i].id
+        }
         let ids = []
         for (let id = 1; id <= maxId; id++)
-            ids.push(id)
+            if (!elsewhere[id])
+                ids.push(id)
         return ids
     }
 
@@ -345,9 +369,12 @@ RowLayout {
             // Set by StatusbarWindow's keyboard navigation.
             property bool focused: false
 
-            // Whether this workspace is the currently focused one.
-            readonly property bool isActive: Hyprland.focusedWorkspace
-                && Hyprland.focusedWorkspace.id === ws.modelData
+            // Whether this is the workspace shown on this bar's monitor (the
+            // globally focused one when the monitor is not known).
+            readonly property var shownWorkspace: wsRoot.monitor
+                ? wsRoot.monitor.activeWorkspace : Hyprland.focusedWorkspace
+            readonly property bool isActive: ws.shownWorkspace
+                && ws.shownWorkspace.id === ws.modelData
             // Whether the workspace currently holds windows (exists in Hyprland).
             readonly property bool occupied: wsRoot.workspaceById(ws.modelData) !== null
 

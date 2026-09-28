@@ -6,7 +6,8 @@ import QtQuick.Layouts
 import qs.CustomTheme
 
 // Shows the default output sink's volume next to a speaker icon.
-//   • left click / Return   → open pavucontrol
+//   • left click / Return   → open the sound panel (pavucontrol is one click
+//                             further, behind its "Advanced" button)
 //   • right click           → mute (volume 0); right click again restores it
 //   • mouse wheel (hovered)  → raise/lower the volume in 5% steps
 //   • Up / Down arrows (keyboard-focused) → raise/lower the volume
@@ -56,9 +57,11 @@ Rectangle {
             sink.audio.muted = !sink.audio.muted
     }
 
-    // Left click / keyboard Return: open the volume control GUI.
+    // Left click / keyboard Return: the bar opens the sound panel.
+    signal clicked()
+
     function activate(): void {
-        Quickshell.execDetached(["pavucontrol"])
+        volume.clicked()
     }
 
     readonly property bool active: mouseArea.containsMouse || volume.focused
