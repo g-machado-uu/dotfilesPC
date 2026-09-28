@@ -351,7 +351,7 @@ PanelWindow {
         transform: Rotation {
             origin.x: arrow.glyphSize / 2
             origin.y: arrow.glyphSize / 2
-            angle: arrow.bearing
+            angle: (arrow.bearing + 180) % 360
         }
 
         // Drawn pointing straight up, i.e. due north before the rotation.

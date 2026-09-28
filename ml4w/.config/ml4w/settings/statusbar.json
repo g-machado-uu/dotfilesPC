@@ -27,7 +27,7 @@
         ]
     },
     "weather": {
-        "location": "Greenisland, UK",
+        "location": "Greenisland",
         "desktopWidget": true
     }
 }
