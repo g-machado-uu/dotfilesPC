@@ -16,6 +16,7 @@ import qs.MediaApp
 import qs.WallpaperApp
 import qs.SettingsApp
 import qs.SoundApp
+import qs.SystemApp
 
 PanelWindow {
     id: root
@@ -497,6 +498,7 @@ PanelWindow {
             panelRadius: pill.bottomRadius
             panelOpacity: root.settings.opacity.expanded
             panelGap: Math.max(0, (root.barHeight - height) / 2)
+            onRightClicked: root.togglePanel("system")
         }
     }
 
@@ -717,6 +719,17 @@ PanelWindow {
         function open(): void { root.openPanel = "controlcentre" }
         function close(): void { root.closePanel("controlcentre") }
         function isOpen(): bool { return root.openPanel === "controlcentre" }
+    }
+
+    // The system panel. For now it opens with a right click on the power
+    // profile icon; this is what a keybinding will call.
+    IpcHandler {
+        enabled: root.ipcEnabled
+        target: "system"
+        function toggle(): void { root.togglePanel("system") }
+        function open(): void { root.openPanel = "system" }
+        function close(): void { root.closePanel("system") }
+        function isOpen(): bool { return root.openPanel === "system" }
     }
 
     IpcHandler {
@@ -1209,6 +1222,25 @@ PanelWindow {
                 SoundPanel {
                     isOpen: root.openPanel === "sound"
                     onCloseRequested: root.closePanel("sound")
+                }
+            }
+        }
+
+        BarDropdown {
+            id: systemPanel
+            // A wide panel, so it drops from the middle of the bar like the
+            // control centre, whatever opened it.
+            anchorItem: pill
+            open: root.openPanel === "system"
+            onDismissed: root.closePanel("system")
+            panelWidth: 720
+            // As tall as its content, capped for short screens.
+            panelHeight: Math.min(content ? content.panelHeight : 800,
+                                  root.screen.height - root.barHeight - 72)
+            panelContent: Component {
+                SystemPanel {
+                    isOpen: root.openPanel === "system"
+                    onCloseRequested: root.closePanel("system")
                 }
             }
         }

@@ -65,6 +65,10 @@ Rectangle {
         profileRoot.menuOpen = false
     }
 
+    // Right click: the bar opens the system panel (a stand-in until it has a
+    // keybinding of its own).
+    signal rightClicked()
+
     // Mouse click / keyboard Return: toggle the switch popup.
     function activate(): void {
         profileRoot.menuOpen = !profileRoot.menuOpen
@@ -106,7 +110,13 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: profileRoot.activate()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: mouse => {
+            if (mouse.button === Qt.RightButton)
+                profileRoot.rightClicked()
+            else
+                profileRoot.activate()
+        }
     }
 
     // ==========================================

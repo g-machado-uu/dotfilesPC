@@ -281,6 +281,13 @@ hl.bind(
 	{ description = "Open Settings panel" }
 )
 
+-- System monitor panel from statusbar
+hl.bind(
+	mainMod .. " + CTRL + ESCAPE",
+	hl.dsp.exec_cmd("qs ipc call system toggle"),
+	{ description = "Open system monitor from statusbar" }
+)
+
 -- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "Switch to next workspace" })
 hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }), { description = "Switch to previous workspace" })
