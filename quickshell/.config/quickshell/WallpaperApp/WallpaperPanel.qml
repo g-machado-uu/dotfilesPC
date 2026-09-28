@@ -543,6 +543,28 @@ Item {
                 interactive: true
             }
 
+            // A mouse wheel only sends angle deltas, which Flickable turns
+            // into a short, heavily damped flick, so a notch barely moved
+            // the view. Step half a row per notch instead. Qt on Wayland
+            // reports the mouse as a TouchPad device, so tell the two apart by
+            // the deltas: touchpads send pixel deltas, which scroll 1:1. A
+            // declined wheel event doesn't fall through to the view, so both
+            // cases are handled here.
+            WheelHandler {
+                target: null
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: event => {
+                    const deltaY = event.pixelDelta.y !== 0
+                        ? event.pixelDelta.y
+                        : event.angleDelta.y / 120 * grid.cellHeight / 2;
+                    if (!deltaY)
+                        return;
+                    const maxY = grid.originY + Math.max(0, grid.contentHeight - grid.height);
+                    grid.contentY = Math.max(grid.originY, Math.min(maxY, grid.contentY - deltaY));
+                    event.accepted = true;
+                }
+            }
+
             model: FolderListModel {
                 folder: "file://" + root.wallpaperFolder
                 showDirs: false
