@@ -1139,8 +1139,10 @@ PanelWindow {
             open: root.openPanel === "controlcentre"
             onDismissed: root.closePanel("controlcentre")
             panelWidth: 420
-            // Everything on one page, no scrolling; capped for short screens.
-            panelHeight: Math.min(714, root.screen.height - root.barHeight - 72)
+            // Everything on one page, no scrolling: as tall as the content says
+            // it needs, capped for short screens.
+            panelHeight: Math.min(content ? content.panelHeight : 748,
+                                  root.screen.height - root.barHeight - 72)
             panelContent: Component {
                 ControlCentrePanel {
                     isOpen: root.openPanel === "controlcentre"

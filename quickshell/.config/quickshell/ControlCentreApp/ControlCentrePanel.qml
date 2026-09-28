@@ -25,7 +25,10 @@ Item {
     id: root
 
     readonly property real panelWidth: 420
-    readonly property real panelHeight: 714
+    // Whatever the main page needs, so adding a row grows the panel instead
+    // of pushing media off the bottom. The sub-pages fit in the same height.
+    readonly property real panelHeight: mainPage.implicitHeight
+        + mainPage.anchors.topMargin + mainPage.anchors.bottomMargin
 
     // Mirrors the hosting panel's state. Polling and animations only run while
     // the panel is actually on screen.
@@ -572,6 +575,7 @@ Item {
     // MAIN PAGE
     // ------------------------------------------------------------------
     ColumnLayout {
+        id: mainPage
         anchors.fill: parent
         anchors.margins: 16
         spacing: 12

@@ -63,6 +63,9 @@ Item {
     property real backgroundOpacity: 0.9
 
     property Component panelContent: null
+    // The loaded content, so the bar can size the panel from what the content
+    // says it needs (its panelHeight) instead of a number kept in two places.
+    readonly property Item content: contentLoader.item
 
     // Room below the body for the drop's overshoot, which briefly stretches the
     // panel past its final height. Proportional, because the overshoot is a

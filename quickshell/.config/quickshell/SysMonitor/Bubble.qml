@@ -20,17 +20,35 @@ Item {
     property string unit: ""
     property string detail: ""
     property string sub: ""
+    property string sub2: ""           // optional fourth line
 
     // "gauge"  -> speedometer arc + big readout
-    // "thermo" -> a pair of thermometers (CPU / GPU)
+    // "thermo" -> one thermometer per probe: [{ label, temp, max }, ...]
     property string mode: "gauge"
-    property real tempA: 0
-    property real tempAMax: 100
-    property string labelA: "CPU"
-    property real tempB: 0
-    property real tempBMax: 95
-    property string labelB: "GPU"
+    property var probes: []
     property real baseOffset: 0        // resting vertical offset inside the row
+
+    // --- pointer interaction (only the CPU bubble opens anything today) ---
+    property bool interactive: false
+    signal clicked()
+    // > 0 arms a dwell: hold the pointer here that long and `dwelled` fires
+    property int dwellMs: 0
+    signal dwelled()
+    readonly property bool hovered: mouseArea.containsMouse
+    property real hoverScale: 1
+    Behavior on hoverScale { NumberAnimation { duration: 160; easing.type: Easing.OutQuad } }
+
+    // doubles as the progress ring, so the wait is visible rather than a
+    // guess at whether the bubble noticed the pointer
+    property real dwellProgress: 0
+    NumberAnimation {
+        id: dwellAnim
+        target: bubble
+        property: "dwellProgress"
+        from: 0; to: 1
+        duration: Math.max(1, bubble.dwellMs)
+        onFinished: bubble.dwelled()
+    }
 
     // --- animation state ---
     property real formScale: 0.15
@@ -39,6 +57,9 @@ Item {
     property real driftX: 0
 
     readonly property real pad: diameter * 0.14
+    // What the readout's text is sized from. A little under the diameter, so a
+    // bubble has room around its text instead of the text growing with it.
+    readonly property real textSize: diameter * 0.9
 
     implicitWidth: diameter + pad * 2
     implicitHeight: diameter + pad * 2
@@ -56,7 +77,8 @@ Item {
         Translate { x: bubble.driftX; y: bubble.riseY + bubble.floatY },
         Scale {
             origin.x: bubble.width / 2; origin.y: bubble.height / 2
-            xScale: bubble.formScale; yScale: bubble.formScale
+            xScale: bubble.formScale * bubble.hoverScale
+            yScale: bubble.formScale * bubble.hoverScale
         }
     ]
 
@@ -217,17 +239,18 @@ Item {
         Column {
             visible: bubble.mode === "gauge"
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: -bubble.diameter * 0.04
-            spacing: bubble.diameter * 0.012
+            anchors.verticalCenterOffset: -bubble.textSize * 0.04
+            spacing: bubble.textSize * 0.012
 
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 1
+                scale: Math.min(1, bubble.diameter * 0.52 / Math.max(1, implicitWidth))
                 Text {
                     text: bubble.readout
                     color: bubble.pal.on_surface
                     font.family: bubble.pal.fontFamily
-                    font.pixelSize: bubble.diameter * 0.245
+                    font.pixelSize: bubble.textSize * 0.245
                     font.weight: Font.DemiBold
                 }
                 Text {
@@ -235,9 +258,9 @@ Item {
                     color: Qt.rgba(bubble.pal.on_surface_variant.r, bubble.pal.on_surface_variant.g,
                                    bubble.pal.on_surface_variant.b, 0.9)
                     font.family: bubble.pal.fontFamily
-                    font.pixelSize: bubble.diameter * 0.105
+                    font.pixelSize: bubble.textSize * 0.105
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: bubble.diameter * 0.055
+                    anchors.bottomMargin: bubble.textSize * 0.055
                 }
             }
 
@@ -246,32 +269,54 @@ Item {
                 text: bubble.label
                 color: bubble.accent
                 font.family: bubble.pal.fontFamily
-                font.pixelSize: bubble.diameter * 0.082
-                font.letterSpacing: bubble.diameter * 0.012
+                font.pixelSize: bubble.textSize * 0.082
+                font.letterSpacing: bubble.textSize * 0.012
                 font.weight: Font.DemiBold
             }
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: bubble.detail
+                scale: Math.min(1, bubble.diameter * 0.66 / Math.max(1, implicitWidth))
                 color: bubble.pal.on_surface_variant
                 font.family: bubble.pal.fontFamily
-                font.pixelSize: bubble.diameter * 0.075
+                font.pixelSize: bubble.textSize * 0.075
             }
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: bubble.sub
+                scale: Math.min(1, bubble.diameter * 0.60 / Math.max(1, implicitWidth))
                 visible: text !== ""
                 color: Qt.rgba(bubble.pal.on_surface_variant.r, bubble.pal.on_surface_variant.g,
                                bubble.pal.on_surface_variant.b, 0.62)
                 font.family: bubble.pal.fontFamily
-                font.pixelSize: bubble.diameter * 0.066
+                font.pixelSize: bubble.textSize * 0.066
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: bubble.sub2
+                scale: Math.min(1, bubble.diameter * 0.50 / Math.max(1, implicitWidth))
+                visible: text !== ""
+                color: Qt.rgba(bubble.pal.on_surface_variant.r, bubble.pal.on_surface_variant.g,
+                               bubble.pal.on_surface_variant.b, 0.5)
+                font.family: bubble.pal.fontFamily
+                font.pixelSize: bubble.textSize * 0.062
             }
         }
-        // ---------- thermometer pair (mode: "thermo") ----------
+        // ---------- thermometers (mode: "thermo") ----------
         Item {
+            id: thermoBox
             visible: bubble.mode === "thermo"
+
+            // Solve for the per-thermometer unit size that just fills the
+            // chord across the glass: each one is 0.21 units wide with 0.10
+            // units of gap, and two of them are already as large as we ever
+            // want them, so the result is capped at the bubble diameter.
+            readonly property int probeCount: Math.max(1, bubble.probes.length)
+            readonly property real unit: Math.min(bubble.diameter,
+                bubble.diameter * 0.80 / (0.31 * probeCount - 0.10))
             anchors.centerIn: parent
             width: parent.width
             height: parent.height
@@ -293,23 +338,19 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: thermoTitle.bottom
                 anchors.topMargin: bubble.diameter * 0.02
-                spacing: bubble.diameter * 0.10
+                spacing: thermoBox.unit * 0.10
 
-                Thermometer {
-                    pal: bubble.pal
-                    unitSize: bubble.diameter
-                    label: bubble.labelA
-                    temp: bubble.tempA
-                    maxTemp: bubble.tempAMax
-                    col: bubble.ramp((bubble.tempA - 20) / (bubble.tempAMax - 20))
-                }
-                Thermometer {
-                    pal: bubble.pal
-                    unitSize: bubble.diameter
-                    label: bubble.labelB
-                    temp: bubble.tempB
-                    maxTemp: bubble.tempBMax
-                    col: bubble.ramp((bubble.tempB - 20) / (bubble.tempBMax - 20))
+                Repeater {
+                    model: bubble.probes
+                    Thermometer {
+                        required property var modelData
+                        pal: bubble.pal
+                        unitSize: thermoBox.unit
+                        label: modelData.label
+                        temp: modelData.temp
+                        maxTemp: modelData.max
+                        col: bubble.ramp((modelData.temp - 20) / Math.max(1, modelData.max - 20))
+                    }
                 }
             }
 
@@ -340,10 +381,45 @@ Item {
         visible: opacity > 0
     }
 
-    // clicks on a bubble must not dismiss the panel
+    // clicks on a bubble must not dismiss the panel; an interactive one
+    // forwards them instead
     MouseArea {
+        id: mouseArea
         anchors.fill: parent
-        onClicked: {}
+        hoverEnabled: bubble.interactive
+        cursorShape: bubble.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
+        onEntered: {
+            if (!bubble.interactive) return;
+            bubble.hoverScale = 1.05;
+            if (bubble.dwellMs > 0) dwellAnim.restart();
+        }
+        onExited: {
+            bubble.hoverScale = 1;
+            dwellAnim.stop();
+            bubble.dwellProgress = 0;
+        }
+        onClicked: if (bubble.interactive) bubble.clicked()
+    }
+
+    // dwell progress, outside the cached layer because it animates
+    Shape {
+        anchors.fill: parent
+        visible: bubble.dwellProgress > 0 && bubble.dwellProgress < 1
+        preferredRendererType: Shape.CurveRenderer
+
+        ShapePath {
+            strokeColor: bubble.pal.tertiary
+            strokeWidth: 3
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            PathAngleArc {
+                centerX: bubble.cx; centerY: bubble.cy
+                radiusX: bubble.diameter / 2 + 5
+                radiusY: bubble.diameter / 2 + 5
+                startAngle: -90
+                sweepAngle: Math.max(0.01, 360 * bubble.dwellProgress)
+            }
+        }
     }
 
     // ---------- animations ----------
@@ -388,7 +464,7 @@ Item {
 
     SequentialAnimation {
         id: awayAnim
-        PauseAnimation { duration: (bubble.total - 1 - bubble.index) * 55 }
+        PauseAnimation { duration: Math.max(0, bubble.total - 1 - bubble.index) * 55 }
         ParallelAnimation {
             NumberAnimation { target: bubble; property: "riseY"; to: -170 - bubble.index * 22
                               duration: 720; easing.type: Easing.InQuad }
