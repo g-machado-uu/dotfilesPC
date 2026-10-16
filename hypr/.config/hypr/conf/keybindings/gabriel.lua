@@ -9,6 +9,11 @@ hl.bind(
 )
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("~/.config/ml4w/settings/browser.sh"), { description = "Open the browser" })
 hl.bind(
+	mainMod .. "+ CTRL + F",
+	hl.dsp.exec_cmd("~/.config/ml4w/settings/firefox.sh"),
+	{ description = "Open Firefox" }
+)
+hl.bind(
 	mainMod .. " + E",
 	hl.dsp.exec_cmd("~/.config/ml4w/settings/filemanager"),
 	{ description = "Open the filemanager" }
