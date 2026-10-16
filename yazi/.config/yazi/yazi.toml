@@ -1,0 +1,30 @@
+[opener]
+reveal = [
+    { run = 'nautilus %s1', orphan = true, desc = "Reveal in Nautilus" },
+]
+vivaldi-new = [
+    { run = 'vivaldi --new-window %s', orphan = true, desc = "Vivaldi New Window" }
+]
+vivaldi = [
+    { run = 'vivaldi %s', orphan = true, desc = "Vivaldi" }
+]
+firefox = [
+    { run = 'firefox %s', orphan = true, desc = "Firefox" }
+]
+okular = [
+    { run = 'okular %s', orphan = true, desc = "Okular" }
+]
+papers = [
+    { run = 'papers %s', orphan = true, desc = "Papers (GNOME)" }
+]
+inkscape = [
+    { run = 'inkscape %s', orphan = true, desc = "Inkscape" }
+]
+
+[open]
+prepend_rules = [
+    { url = "*.md", use = [ "edit", "vivaldi", "vivaldi-new", "firefox" ] },
+    { url = "*.pdf", use = [ "okular", "papers" ] },
+    { url = "*.{html,htm}", use = [ "edit", "vivaldi", "firefox" ] },
+    { url = "*.svg", use = [ "vivaldi", "firefox", "inkscape" ] },
+]

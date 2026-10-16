@@ -77,6 +77,7 @@ Each folder is a [stow](https://www.gnu.org/software/stow/) package that mirrors
 | `rofi`, `swaync`, `kitty`, `fastfetch`, `btop`, `qt6ct`     | `~/.config/…`                                                | app configs                                                                                              |
 | `nvim`                                                      | `~/.config/nvim`                                             | LazyVim, with LSP, DAP for C, LaTeX and snippets                                                         |
 | `vim`                                                       | `~/.config/vim/.vimrc`                                       | plain vim, for when nvim is not there                                                                    |
+| `yazi`                                                      | `~/.config/yazi`                                             | yazi file manager, extra "Open with" choices (md, pdf, html, svg) and the info-popup plugin              |
 | `browserflags`                                              | `~/.config/chromium-flags.conf`, `~/.config/edge-flags.conf` | Wayland flags for Chromium and Edge                                                                      |
 | `gtk-2.0`, `gtk-3.0`, `gtk-4.0`, `xsettingsd`, `xresources` | `~/.gtkrc-2.0`, `~/.config/…`, `~/.Xresources`               | GTK theme, ArcStarry cursor, kora icons                                                                  |
 | `fonts`                                                     | `~/.local/share/fonts/Fira_Sans`                             | Fira Sans, which the bar, rofi and hyprlock use                                                          |
@@ -120,7 +121,7 @@ Use GNU Stow to manage these dotfiles.
 cd ~/.dotfilesLaptop
 stow hypr quickshell ml4w matugen rofi swaync kitty fastfetch btop qt6ct \
      nvim vim browserflags gtk-2.0 gtk-3.0 gtk-4.0 xsettingsd xresources \
-     fonts cursors zsh
+     fonts cursors zsh yazi
 stow --no-folding systemd xdg-desktop-portal ohmyposh
 fc-cache -f
 ```
