@@ -260,9 +260,16 @@ hl.bind(
 	hl.dsp.exec_cmd("~/.config/hypr/scripts/gamemode.sh"),
 	{ description = "Toggle game mode" }
 )
+-- hl.bind(
+-- 	mainMod .. " + CTRL + L",
+-- 	hl.dsp.exec_cmd("pidof hypridle >/dev/null && loginctl lock-session || pidof hyprlock || hyprlock"),
+-- 	{ description = "Lock Screen" }
+-- )
 hl.bind(
 	mainMod .. " + CTRL + L",
-	hl.dsp.exec_cmd("pidof hypridle >/dev/null && loginctl lock-session || pidof hyprlock || hyprlock"),
+	hl.dsp.exec_cmd(
+		"pidof hypridle >/dev/null && loginctl lock-session || pgrep -f 'lock_shell[.]qml' >/dev/null || $HOME/.local/share/quickshell-lockscreen/lock.sh"
+	),
 	{ description = "Lock Screen" }
 )
 hl.bind(
