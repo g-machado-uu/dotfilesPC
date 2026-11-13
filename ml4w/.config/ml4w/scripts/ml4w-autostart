@@ -65,7 +65,5 @@ else
     ~/.config/ml4w/scripts/ml4w-wallpaper "$(cat $CACHE_FILE)" --skip-wallpaper &
 fi
 
-# Start Quickshell Overview
-info "Starting Quickshell Overview"
-qs -p $HOME/.config/quickshell/overview &
-info "Quickshell Overview started"
+# Quickshell Overview: now part of the main quickshell config (loaded on
+# demand by ~/.config/quickshell/shell.qml), so no separate process.

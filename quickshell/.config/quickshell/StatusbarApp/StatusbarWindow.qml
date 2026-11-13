@@ -17,6 +17,7 @@ import qs.WallpaperApp
 import qs.SettingsApp
 import qs.SoundApp
 import qs.SystemApp
+import qs.LauncherApp
 
 PanelWindow {
     id: root
@@ -71,7 +72,11 @@ PanelWindow {
         // desktopWidget: whether the time/weather widget is allowed onto an
         // empty workspace at all. Off means the bar keeps the clock at all
         // times and the widget never appears.
-        "weather": { "location": "Belfast, UK", "desktopWidget": true }
+        // widgetScale: size of the desktop widget (1.0 = original size).
+        // showDelay: ms a workspace must stay empty before the widget comes
+        // out, so apps that blink their window while loading don't bounce it.
+        "weather": { "location": "Belfast, UK", "desktopWidget": true,
+                     "widgetScale": 0.8, "showDelay": 600 }
     })
 
     property var settings: defaultSettings
@@ -216,6 +221,33 @@ PanelWindow {
     // document when it is not, and no write at all when the file is non-empty
     // and unparseable. The key is matched on its own, not within its group, so
     // it has to be unique across the document — "location" is.
+    // Persist a number into the master file and return the updated text. Same
+    // rules as persistString; the key has to be unique across the document.
+    function persistNumber(group, key, value): string {
+        let file = root.masterFile()
+        let src = file.text()
+        let re = new RegExp('("' + key + '"\\s*:\\s*)-?[0-9.]+')
+        let updated
+        if (re.test(src)) {
+            updated = src.replace(re, (m, p1) => p1 + String(value))
+        } else {
+            let obj = root.parseSettings(src)
+            if (obj === undefined && src && src.trim() !== "") {
+                console.warn("statusbar settings: master file is not valid"
+                    + " JSON; leaving it untouched instead of overwriting.")
+                return src
+            }
+            if (typeof obj !== "object" || obj === null)
+                obj = {}
+            if (obj[group] === undefined)
+                obj[group] = {}
+            obj[group][key] = value
+            updated = JSON.stringify(obj, null, 4) + "\n"
+        }
+        file.setText(updated)
+        return updated
+    }
+
     function persistString(group, key, value): string {
         let file = root.masterFile()
         let src = file.text()
@@ -338,7 +370,12 @@ PanelWindow {
             monitor: root.hyprMonitor
         }
     }
-    Component { id: cLauncher;   LauncherModule {} }
+    Component {
+        id: cLauncher
+        LauncherModule {
+            onClicked: root.togglePanel("launcher")
+        }
+    }
     Component {
         id: cClock
         ClockModule {
@@ -763,6 +800,15 @@ PanelWindow {
 
     IpcHandler {
         enabled: root.ipcEnabled
+        target: "launcher"
+        function toggle(): void { root.togglePanel("launcher") }
+        function open(): void { root.openPanel = "launcher" }
+        function close(): void { root.closePanel("launcher") }
+        function isOpen(): bool { return root.openPanel === "launcher" }
+    }
+
+    IpcHandler {
+        enabled: root.ipcEnabled
         target: "settings"
         function toggle(): void { root.togglePanel("settings") }
         function open(): void { root.openPanel = "settings" }
@@ -816,6 +862,24 @@ PanelWindow {
             if (name === "")
                 return
             root.applySettings(root.persistString("weather", "location", name))
+        }
+        // Size of the desktop widget, 1.0 being the original size.
+        function weatherWidgetScale(): string { return String(root.settings.weather.widgetScale) }
+        function setWeatherWidgetScale(scale: string): void {
+            let v = parseFloat(scale)
+            if (isNaN(v))
+                return
+            v = Math.max(0.5, Math.min(1.5, v))
+            root.applySettings(root.persistNumber("weather", "widgetScale", v))
+        }
+        // How long (ms) a workspace must stay empty before the widget returns.
+        function weatherShowDelay(): string { return String(root.settings.weather.showDelay) }
+        function setWeatherShowDelay(ms: string): void {
+            let v = parseInt(ms)
+            if (isNaN(v))
+                return
+            v = Math.max(0, Math.min(10000, v))
+            root.applySettings(root.persistNumber("weather", "showDelay", v))
         }
     }
 
@@ -1035,7 +1099,7 @@ PanelWindow {
             anchors.right: parent.right
             anchors.rightMargin: pill.edgeMargin
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 14
+            spacing: 5
 
             opacity: pill.expanded ? 1 : 0
             visible: opacity > 0
@@ -1241,6 +1305,23 @@ PanelWindow {
                 SystemPanel {
                     isOpen: root.openPanel === "system"
                     onCloseRequested: root.closePanel("system")
+                }
+            }
+        }
+
+        BarDropdown {
+            id: launcherPanel
+            // A wide panel, so it drops from the middle of the bar like the
+            // control centre, whether opened from its icon or by IPC.
+            anchorItem: pill
+            open: root.openPanel === "launcher"
+            onDismissed: root.closePanel("launcher")
+            panelWidth: 520
+            panelHeight: Math.min(520, root.screen.height - root.barHeight - 72)
+            panelContent: Component {
+                LauncherPanel {
+                    isOpen: root.openPanel === "launcher"
+                    onCloseRequested: root.closePanel("launcher")
                 }
             }
         }

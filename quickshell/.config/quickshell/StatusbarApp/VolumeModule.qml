@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
 import qs.CustomTheme
+import qs.shared
 
 // Shows the default output sink's volume next to a speaker icon.
 //   • left click / Return   → open the sound panel (pavucontrol is one click
@@ -103,8 +104,10 @@ Rectangle {
             }
         }
 
-        Text {
+        // Sized for "100%" so the bar does not twitch while the volume moves.
+        StableText {
             Layout.alignment: Qt.AlignVCenter
+            reserve: "100%"
             text: volume.percent + "%"
             color: volume.active ? Theme.background : Theme.primary
             font.family: Theme.fontFamily

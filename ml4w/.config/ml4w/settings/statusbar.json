@@ -28,6 +28,8 @@
     },
     "weather": {
         "location": "Greenisland",
-        "desktopWidget": true
+        "desktopWidget": true,
+        "widgetScale": 0.9,
+        "showDelay": 600
     }
 }

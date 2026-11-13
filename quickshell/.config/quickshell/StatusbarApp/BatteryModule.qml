@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
 import qs.CustomTheme
+import qs.shared
 
 // Shows the battery charge percentage next to a battery icon. The module is
 // shown only on machines that actually have a laptop battery, so on a desktop
@@ -85,8 +86,10 @@ Rectangle {
             }
         }
 
-        Text {
+        StableText {
             Layout.alignment: Qt.AlignVCenter
+            // Two digits: it only steps up to 100% once, when charging ends.
+            reserve: "99%"
             text: battery.shownPercent + "%"
             color: battery.active ? Theme.background : Theme.primary
             font.family: Theme.fontFamily

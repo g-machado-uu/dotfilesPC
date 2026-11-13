@@ -13,7 +13,14 @@ export PATH=$PATH:/home/gabriel/texlive/bin/x86_64-linux/
 export INFOPATH=$INFOPATH:/home/gabriel/texlive/texmf-dist/doc/info
 export MANPATH=$MANPATH:/home/gabriel/texlive/texmf-dist/doc/man
 
-
+# -----------------------------------------------------
+# Set-up vim motions
+# -----------------------------------------------------
+bindkey -v
+export KEYTIMEOUT=1
+autoload -Uz edit-command-line; zle -N edit-command-line
+bindkey -M vicmd 'v' edit-command-line   # press v in normal mode → opens nvim
+bindkey -M viins '^v' edit-command-line  # optional: keep Ctrl+V in insert mode too
 # -----------------------------------------------------
 # Set-up FZF key bindings (CTRL R for fuzzy history finder)
 # -----------------------------------------------------
@@ -39,8 +46,6 @@ zstyle ':completion:*' menu no
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
 zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 
-autoload edit-command-line; zle -N edit-command-line
-bindkey '^v' edit-command-line
 # -----------------------------------------------------
 # Prompt
 # -----------------------------------------------------
@@ -89,6 +94,23 @@ alias ml4w-settings='qs ipc call settings toggle'
 alias ml4w-calendar='qs ipc call calendar toggle'
 alias ml4w-hyprland='flatpak run com.ml4w.hyprlandsettings'
 alias ml4w-sidebar='qs ipc call controlcentre toggle'
+
+# -----------------------------------------------------
+# Diffs
+# -----------------------------------------------------
+
+alias diff='diff --color=auto'
+alias diffu='diff -uN --color=always'
+# Side by side, only the lines that differ, sized to the terminal
+alias diffy='diff -y --suppress-common-lines --color=always -W $COLUMNS'
+# Just say which files differ
+alias diffq='diff -rq'
+# Recursive unified diff of two folders, skipping .git
+alias diffr='diff -ruN --color=always -x .git'
+# Git's diff for any two files (colour + pager), even outside a repo
+alias gdiff='git diff --no-index'
+# Open both files in Neovim's diff mode
+alias vdiff='nvim -d'
 
 # -----------------------------------------------------
 # Scripts
@@ -159,9 +181,10 @@ function y() {
 }
 alias yc="cd /home/gabriel/.config && y"
 # -----------------------------------------------------
-# SSH Agent 
+# NVM
 # -----------------------------------------------------
-# eval "$(ssh-agent -s)"
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 # -----------------------------------------------------
 # ZOXIDE

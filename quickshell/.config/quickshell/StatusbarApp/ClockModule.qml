@@ -92,6 +92,8 @@ Item {
             font.family: Theme.fontFamily
             font.pixelSize: 14
             font.bold: true
+            // Tabular digits: "11:11" and "08:08" take the same width.
+            font.features: { "tnum": 1 }
         }
 
         // A hairline rule rather than punctuation: it separates the two fields

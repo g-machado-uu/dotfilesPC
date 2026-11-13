@@ -179,6 +179,24 @@
         "read_command": "qs ipc call statusbar weatherLocation",
         "write_command": "qs ipc call statusbar setWeatherLocation %s",
         "default": "Belfast, UK"
+      },
+      {
+        "name": "Widget size",
+        "type": "choose",
+        "mode": "command",
+        "read_command": "qs ipc call statusbar weatherWidgetScale",
+        "write_command": "qs ipc call statusbar setWeatherWidgetScale %s",
+        "default": "0.8",
+        "options": ["0.6", "0.65", "0.7", "0.75", "0.8", "0.85", "0.9", "1"]
+      },
+      {
+        "name": "Widget delay (ms)",
+        "type": "choose",
+        "mode": "command",
+        "read_command": "qs ipc call statusbar weatherShowDelay",
+        "write_command": "qs ipc call statusbar setWeatherShowDelay %s",
+        "default": "600",
+        "options": ["0", "250", "500", "750", "1000", "1500", "2000", "3000", "5000"]
       }
     ]
   },

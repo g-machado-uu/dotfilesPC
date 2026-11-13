@@ -71,8 +71,10 @@ Rectangle {
             }
         }
 
-        Text {
+        StableText {
             Layout.alignment: Qt.AlignVCenter
+            // No reserved room: the count changes rarely and never under the
+            // pointer, so an empty gap after "1" would only waste space.
             text: updates.count
             color: updates.active ? Theme.background : Theme.primary
             font.family: Theme.fontFamily

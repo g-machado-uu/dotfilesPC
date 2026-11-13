@@ -68,7 +68,9 @@ Rectangle {
 
         Text {
             Layout.alignment: Qt.AlignVCenter
-            // Long titles are cut rather than allowed to push the bar wider.
+            // A fixed slot: long titles are cut and short ones leave room, so
+            // a track change never resizes the bar.
+            Layout.preferredWidth: 150
             Layout.maximumWidth: 150
             text: media.title
             elide: Text.ElideRight

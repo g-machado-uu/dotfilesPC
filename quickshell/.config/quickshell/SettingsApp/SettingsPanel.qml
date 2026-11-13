@@ -363,6 +363,12 @@ Item {
                             Layout.fillWidth: true
                             spacing: 8
                             Text {
+                                // Shrinks and elides rather than pushing the
+                                // control on the right out of the panel.
+                                // Also takes the spare width, so every control
+                                // lines up on the right.
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
                                 text: row.setting.name
                                 color: Theme.primary
                                 font.family: Theme.fontFamily
@@ -382,7 +388,6 @@ Item {
                                     NumberAnimation { target: savedTag; property: "opacity"; to: 0; duration: 300 }
                                 }
                             }
-                            Item { Layout.fillWidth: true }
                         }
 
                         Text {

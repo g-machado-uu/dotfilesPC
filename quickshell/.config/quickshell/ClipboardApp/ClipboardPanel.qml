@@ -25,6 +25,8 @@ Item {
         if (root.isOpen)
             root.refreshClipboard()
     }
+    // The panel is only built when it opens (see BarPanel).
+    Component.onCompleted: if (root.isOpen) root.refreshClipboard()
 
     ListModel { id: clipModel }
 

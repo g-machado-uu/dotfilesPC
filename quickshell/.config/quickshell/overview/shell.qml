@@ -11,6 +11,7 @@ import "./common/widgets/"
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 
 ShellRoot {
     Connections {
@@ -22,4 +23,13 @@ ShellRoot {
     }
 
     Overview {}
+
+    // Standalone use only (qs -p ~/.config/quickshell/overview). The main
+    // shell loads this module itself and has its own copy of this handler.
+    IpcHandler {
+        target: "overview"
+        function toggle() { GlobalStates.overviewOpen = !GlobalStates.overviewOpen }
+        function close() { GlobalStates.overviewOpen = false }
+        function open() { GlobalStates.overviewOpen = true }
+    }
 }

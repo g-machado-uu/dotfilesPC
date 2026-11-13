@@ -37,6 +37,18 @@ PanelWindow {
     // toggled on the control centre's Appearance page). Off means it never comes out, so the bar's own
     // clock is never folded away.
     property bool widgetEnabled: true
+    // Overall size of the widget, 1.0 being the original (sized for a large
+    // panel). statusbar.json weather.widgetScale, set from the settings panel.
+    property real uiScale: 0.8
+    // How long the focused workspace has to stay empty before the widget comes
+    // back out, in ms. Apps that flash a splash window, or close and reopen
+    // their window while loading, briefly leave the workspace empty; without
+    // this the widget poured out and was sucked straight back in each time.
+    // Leaving is never delayed. statusbar.json weather.showDelay.
+    property int showDelay: 600
+
+    // Scales a design-size pixel value by uiScale.
+    function px(v: real): int { return Math.round(v * w.uiScale) }
 
     // True while the widget is on screen. The bar reads the companion flag
     // below to decide whether to show its own clock.
@@ -104,7 +116,7 @@ PanelWindow {
     // to the compositor, and measurably ~50ms of dropped frames. Three sections
     // appearing one after the other meant three of those, landing right in the
     // middle of the pour-out. That was the stutter.
-    implicitHeight: stack.y + stack.implicitHeight + 48
+    implicitHeight: stack.y + stack.implicitHeight + w.px(48)
 
     // The point everything converges on: the middle of the bar, which is where
     // the bar's own clock sits.
@@ -207,9 +219,13 @@ PanelWindow {
 
     // Hyprland fires several events for one action; settle before animating so
     // the widget never flickers on the way between two empty workspaces.
+    //
+    // Coming out waits for showDelay instead (and every further Hyprland event
+    // restarts the wait), so a workspace that is only empty for a moment while
+    // an app is starting never brings the widget out at all.
     Timer {
         id: settle
-        interval: 70
+        interval: w.wantShown && !w._shown ? Math.max(70, w.showDelay) : 70
         onTriggered: w._shown = w.wantShown
     }
 
@@ -386,9 +402,9 @@ PanelWindow {
         id: stack
 
         anchors.horizontalCenter: parent.horizontalCenter
-        y: w.barHeight + 20
-        width: 560
-        spacing: 22
+        y: w.barHeight + w.px(20)
+        width: w.px(560)
+        spacing: w.px(22)
 
         // --- 1. TIME AND DATE ---
         // This is the one section that keeps a blurred halo: its content only
@@ -421,7 +437,7 @@ PanelWindow {
                     text: Qt.formatDateTime(clock.date, w.timeFormat)
                     color: w.ink
                     font.family: "Red Hat Display"
-                    font.pixelSize: 92
+                    font.pixelSize: w.px(92)
                     font.weight: Font.Medium
                     font.letterSpacing: -1
                 }
@@ -431,9 +447,9 @@ PanelWindow {
                     text: Qt.formatDateTime(clock.date, "dddd, d MMMM").toUpperCase()
                     color: w.inkDim
                     font.family: "Red Hat Display"
-                    font.pixelSize: 17
+                    font.pixelSize: w.px(17)
                     font.weight: Font.Medium
-                    font.letterSpacing: 4
+                    font.letterSpacing: w.px(4)
                 }
             }
         }
@@ -449,7 +465,7 @@ PanelWindow {
             Column {
                 id: weatherCol
                 width: parent.width
-                spacing: 8
+                spacing: w.px(8)
 
                 // Where the reading is for, as the control centre labels it. Read
                 // only: the place is changed in the control centre or the settings.
@@ -457,11 +473,11 @@ PanelWindow {
                 // window (see implicitHeight above).
                 InkText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    height: 16
+                    height: w.px(16)
                     verticalAlignment: Text.AlignVCenter
                     text: (weather.place !== "" ? weather.place : w.location).toUpperCase()
                     color: w.inkFaint
-                    font.pixelSize: 12
+                    font.pixelSize: w.px(12)
                     font.weight: Font.Bold
                     font.letterSpacing: 2
                 }
@@ -472,16 +488,16 @@ PanelWindow {
                 Row {
                     id: weatherRow
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 34
+                    spacing: w.px(34)
 
                     // Icon and temperature.
                     Row {
                         id: nowRow
-                        spacing: 14
+                        spacing: w.px(14)
 
                         WeatherIcon {
                             anchors.verticalCenter: parent.verticalCenter
-                            size: 84
+                            size: w.px(84)
                             code: weather.code
                             night: !weather.isDay
                             // Parked while a section is in flight, so the transition
@@ -502,14 +518,14 @@ PanelWindow {
 
                             InkText {
                                 text: weather.loaded ? weather.fmt(weather.temperature) : "--°"
-                                font.pixelSize: 58
+                                font.pixelSize: w.px(58)
                             }
 
                             InkText {
                                 text: weather.error !== "" ? weather.error
                                     : (weather.loaded ? conditionGlyph.label : "Loading…")
                                 color: w.inkDim
-                                font.pixelSize: 15
+                                font.pixelSize: w.px(15)
                                 font.letterSpacing: 0.5
                             }
                         }
@@ -520,13 +536,13 @@ PanelWindow {
                     GridLayout {
                         id: detailGrid
                         columns: 2
-                        columnSpacing: 10
+                        columnSpacing: w.px(10)
                         rowSpacing: 2
 
                         component DetailLabel: InkText {
                             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                             color: w.inkFaint
-                            font.pixelSize: 11
+                            font.pixelSize: w.px(11)
                             font.weight: Font.Bold
                             font.letterSpacing: 1
                         }
@@ -534,7 +550,7 @@ PanelWindow {
                         component DetailValue: InkText {
                             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                             color: w.inkDim
-                            font.pixelSize: 15
+                            font.pixelSize: w.px(15)
                         }
 
                         DetailLabel { text: "MIN / MAX" }
@@ -557,7 +573,7 @@ PanelWindow {
 
                             WindArrow {
                                 Layout.alignment: Qt.AlignVCenter
-                                glyphSize: 11
+                                glyphSize: w.px(11)
                                 bearing: weather.windDirection
                                 opacity: weather.loaded ? 1 : 0
                             }
@@ -595,7 +611,7 @@ PanelWindow {
             Row {
                 id: forecastRow
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 54
+                spacing: w.px(54)
 
                 Repeater {
                     model: weather.forecast
@@ -608,14 +624,14 @@ PanelWindow {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData.day.toUpperCase()
                             color: w.inkFaint
-                            font.pixelSize: 12
+                            font.pixelSize: w.px(12)
                             font.weight: Font.Bold
                             font.letterSpacing: 2
                         }
 
                         WeatherIcon {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            size: 42
+                            size: w.px(42)
                             code: modelData.code
                             animate: w.glyphMotion && !w.animating
                             warm: w.ink
@@ -626,7 +642,7 @@ PanelWindow {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: weather.fmt(modelData.min) + " / " + weather.fmt(modelData.max)
                             color: w.inkDim
-                            font.pixelSize: 14
+                            font.pixelSize: w.px(14)
                         }
                     }
                 }

@@ -48,6 +48,8 @@ Default configuration file for the Quickshell Statusbar.
   },
   "weather": {
     "location": "Belfast, UK",
-    "desktopWidget": true
+    "desktopWidget": true,
+    "widgetScale": 0.8,
+    "showDelay": 600
   }
 }

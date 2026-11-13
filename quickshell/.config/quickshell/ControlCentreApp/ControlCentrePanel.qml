@@ -187,6 +187,14 @@ Item {
         settleTimer.restart()
     }
 
+    // The panel is only built when it opens (see BarPanel), already open.
+    Component.onCompleted: {
+        if (root.isOpen) {
+            root.pollState()
+            root.pollAudio()
+        }
+    }
+
     onIsOpenChanged: {
         if (root.isOpen) {
             // The weather catches up by itself: `active` follows isOpen.

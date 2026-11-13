@@ -2,9 +2,12 @@
 
 import Quickshell
 import Quickshell.Io
+import QtQuick
 import "StatusbarApp"
 import "DesktopWidget"
 import "CustomTheme"
+import "overview/modules/overview" as OverviewModule
+import "overview/services" as OverviewState
 
 ShellRoot {
     id: shell
@@ -19,6 +22,51 @@ ShellRoot {
             // from the theme, so a theme reload is a good moment to look again.
             desktopWidget.sampleWallpaper()
         }
+    }
+
+    // --- WORKSPACE OVERVIEW (SUPER + TAB) ---
+    // Used to run as its own `qs -p overview` process, which meant a second
+    // copy of Qt in memory all session. It now lives here, and is only built
+    // while it is in use: created on the first open and released again once it
+    // has been closed for overviewIdleMs, which takes its window previews
+    // (ScreencopyView buffers) with it.
+    readonly property int overviewIdleMs: 60000
+
+    function setOverview(on: bool): void {
+        if (on) {
+            overviewIdle.stop()
+            // LazyLoader builds synchronously when activated, so the windows
+            // exist before the open flag flips and see it change.
+            overviewLoader.active = true
+        }
+        OverviewState.GlobalStates.overviewOpen = on
+    }
+
+    LazyLoader {
+        id: overviewLoader
+        active: false
+        OverviewModule.Overview {}
+    }
+
+    Timer {
+        id: overviewIdle
+        interval: shell.overviewIdleMs
+        onTriggered: overviewLoader.active = false
+    }
+
+    Connections {
+        target: OverviewState.GlobalStates
+        function onOverviewOpenChanged(): void {
+            if (!OverviewState.GlobalStates.overviewOpen)
+                overviewIdle.restart()
+        }
+    }
+
+    IpcHandler {
+        target: "overview"
+        function toggle(): void { shell.setOverview(!OverviewState.GlobalStates.overviewOpen) }
+        function open(): void { shell.setOverview(true) }
+        function close(): void { shell.setOverview(false) }
     }
 
     // The bar that shares a screen with the widget: it feeds the widget its
@@ -39,6 +87,8 @@ ShellRoot {
         location: shell.mainBar ? shell.mainBar.settings.weather.location : "Belfast, UK"
         widgetEnabled: shell.mainBar ? shell.mainBar.weatherWidgetEnabled : false
         timeFormat: shell.mainBar ? shell.mainBar.settings.clock.format : "HH:mm"
+        uiScale: shell.mainBar ? shell.mainBar.settings.weather.widgetScale : 0.8
+        showDelay: shell.mainBar ? shell.mainBar.settings.weather.showDelay : 600
         // The widget deliberately stays out while a bar panel is dropped. The
         // panels belong to the bar and are drawn over the top of it, so they
         // are legible against the widget; sending the widget away instead meant

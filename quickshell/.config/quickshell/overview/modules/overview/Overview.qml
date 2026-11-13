@@ -236,17 +236,7 @@ Scope {
         }
     }
 
-    IpcHandler {
-        target: "overview"
-
-        function toggle() {
-            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
-        }
-        function close() {
-            GlobalStates.overviewOpen = false;
-        }
-        function open() {
-            GlobalStates.overviewOpen = true;
-        }
-    }
+    // The "overview" IPC target lives with whoever hosts this module: the
+    // main shell (../../../shell.qml), which only builds the overview while it
+    // is in use, or overview/shell.qml when run standalone.
 }

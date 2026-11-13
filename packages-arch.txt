@@ -37,6 +37,13 @@ qt6-svg
 qt6-virtualkeyboard
 qt6-multimedia-ffmpeg
 qt6ct
+# Lock screen (qylock, installed separately, see README)
+qt6-5compat
+qt6-declarative
+qt6-multimedia
+gst-plugins-base
+gst-plugins-good
+gst-plugins-bad
 nwg-look
 nwg-displays
 gnome-themes-extra
@@ -126,6 +133,9 @@ unzip
 tar
 flatpak
 xdg-user-dirs
+# AppImages (Filen)
+fuse2
+fuse3
 python-pip
 python-gobject
 # AUR

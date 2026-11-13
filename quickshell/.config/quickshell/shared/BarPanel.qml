@@ -197,6 +197,12 @@ Item {
                     Loader {
                         id: contentLoader
                         anchors.fill: parent
+                        // Built when the panel opens and destroyed once its
+                        // close animation is over, so a closed panel costs no
+                        // memory. Content therefore starts fresh on every open
+                        // (and is created with isOpen already true, so any
+                        // on-open work belongs in Component.onCompleted too).
+                        active: panel.mapped
                         sourceComponent: panel.panelContent
                     }
                 }

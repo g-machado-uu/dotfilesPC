@@ -48,6 +48,15 @@ sample_rate = 16000
 
 # Maximum recording duration in seconds (safety limit)
 max_duration_secs = 60
+pause_media = false
+duck_media = false
+duck_media_volume_percent = 34
+duck_media_fade_ms = 150
+
+[audio.feedback]
+enabled = false
+theme = "default"
+volume = 0.699999988079071
 
 # Pause MPRIS media players (Spotify, Firefox, etc.) when recording starts,
 # resume them when recording stops. Requires playerctl.
@@ -92,7 +101,7 @@ mode = "local"
 flash_attention = false
 on_demand_loading = true
 gpu_isolation = false
-initial_prompt = "Transcribe with proper capitalization and punctuation."
+initial_prompt = "Transcribe with proper capitalization and punctuation. Add paragraphs when appropriate."
 
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
@@ -190,9 +199,6 @@ type_delay_ms = 0
 auto_submit = false
 shift_enter_newlines = true
 pre_type_delay_ms = 0
-append_text = """
-
-"""
 
 # Automatically submit (send Enter key) after outputting transcribed text
 # Useful for chat applications, command lines, or forms where you want
@@ -251,6 +257,12 @@ append_text = """
 # trim = true         # Strip leading/trailing whitespace from output (default: true)
 # fallback_on_empty = true  # Use original text if command returns empty (default: true)
 
+# Start each dictation on a new line (instead of ending one with a newline).
+# trim = false keeps the leading newline the command adds.
+[output.post_process]
+command = "printf '\\n'; cat"
+trim = false
+
 [output.notification]
 # Show notification when recording starts (hotkey pressed)
 on_recording_start = true
@@ -277,19 +289,26 @@ source = "mic"
 
 [osd]
 enabled = true
-frontend = "gtk4"
+frontend = "quickshell"
 position = "bottom-center"
 width_px = 400
-height_px = 48
-margin_px = 24
+height_px = 32
+margin_px = 8
 top_margin = 0.85
 opacity = 0.95
 waveform_window_secs = 3.0
 peak_decay_db_per_sec = 6.0
-waveform_gain = 10.0
+waveform_gain = 15.0
+style = "aegis-hud"
+layout = "compact"
 
 [status]
-icon_theme = "emoji"
+icon_theme = "nerd-font"
+
+[vad]
+enabled = false
+backend = "auto"
+threshold = 0.5
 
 # Notification urgency level: "low", "normal", or "critical".
 # On GNOME, "low" notifications are delivered to the drawer without a popup banner.

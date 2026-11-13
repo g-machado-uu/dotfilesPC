@@ -1,328 +1,461 @@
-# dotfilesLaptop
+# dotfilesPC
 
-My own take on ML4W dotfiles. Repo setup to be used with gnu stow.
+Configuration files for a Hyprland desktop on Arch Linux, managed with
+[GNU Stow](https://www.gnu.org/software/stow/). This repository is for the
+desktop PC: an NVIDIA GPU and a single 3440×1440 ultrawide monitor at 75 Hz.
+The laptop has its own repository,
+[dotfilesLaptop](https://github.com/g-machado-uu/dotfilesLaptop), which shares
+most of the desktop but has its own monitors, environment and package choices.
 
-![The desktop widget on an empty workspace](docs/img/desktop-widget.jpg)
+The configuration derives from
+[ML4W OS](https://github.com/mylinuxforwork/dotfiles) 2.14.1 by Stephan Raabe.
+The principal modification is a Quickshell status bar from which every panel of
+the desktop is opened. A time and weather widget occupies empty workspaces.
 
-The idea is to use the power of Quickshell to have most of the apps dropping
-out of the statusbar. There is a time and weather widget above, which lives on
-empty workspaces only, but it can be toggled in the top bar menu, which is  
-called via SUPER+CTRL+S.
+The modifications to the ML4W files are listed under
+[Changes from ML4W](#changes-from-ml4w). The configuration was developed with
+the assistance of Claude (Anthropic).
 
-It started as [ML4W OS](https://github.com/mylinuxforwork/dotfiles) 2.14.1 by
-Stephan Raabe, and a good part of it is still his work, which includes the
-wallpapers, updates script, and a lot more is carried over from ML4W dotfiles.
-What I changed in his files is listed under [Changes from ML4W](#changes-from-ml4w).
-
-This customisation is heavily assisted by Claude AI. Nobody with twin toddlers
-and a full-time job that has nothing to do with developing has the time to
-configure all this. I wanted something to fit my needs based on the great
-job done by Stephan Raabe and his ML4W dotfiles.
+![Time and weather widget on an empty workspace](docs/img/desktop-widget.jpg)
 
 ## Screenshots
 
-Following ML4W philosophy, the items displayed in the quickshell statusbar
-can be modified by changing `~/.config/ml4w/settings/statusbar.json`.
+All screenshots were taken on this PC. The modules of the status bar are
+defined in `~/.config/ml4w/settings/statusbar.json`, following the ML4W
+convention.
 
 ![Status bar](docs/img/statusbar.png)
 
-<details>
-<summary>The apps that drop down from the statusbar</summary>
+The control centre (`SUPER + CTRL + S`) contains network and Bluetooth tiles,
+Do Not Disturb, Caffeine, Night Light, Gamemode, audio and brightness sliders,
+an Appearance page, the weather and the active media player.
 
-Control centre (`SUPER + CTRL + S`), which also took over the old sidebar. Top
-to bottom:
+![Control centre](docs/img/control-centre.jpg)
 
-- shortcuts to the wallpaper picker and Settings (hover one to see its keys)
-- tiles for Wi-Fi, Bluetooth, Do Not Disturb, Caffeine, Night Light and
-  Gamemode; Wi-Fi and Bluetooth open sub-pages in place
-- the notification count, with **Clear all** and **Open** (swaync still
-  handles notifications)
-- volume, microphone and brightness
-- **Appearance ›**, a sub-page with the dark style for GTK apps, the GTK and Qt
-  theme tools, the weather widget switch, the colour picker and HyprMod
-- the weather; clicking the place name turns it into a text field, which
-  changes the place for both the control centre and the widget
-- whatever is playing, always last; with several players, the counter in the
-  corner switches between them
-
-It is the `controlcentre` module in the bar, with a mark under the glyph while
-notifications are waiting and a bar there while Do Not Disturb is on. It still
-answers to its old names, `notifications` and `sidebar`, in `qs ipc`
-(`notifications` also in `statusbar.json`).
-
-![Control centre](docs/img/notification-centre.jpg)
-
-The Settings panel, on its Statusbar tab.
+The Settings panel (`SUPER + SHIFT + S`) replaces the separate ML4W settings
+application.
 
 ![Settings panel](docs/img/settings-panel.jpg)
 
-The wallpaper picker. Picking one runs matugen, which recolours the bar, GTK,
-kitty, rofi, btop and swaync.
+The wallpaper picker (`SUPER + CTRL + W`). Selecting a wallpaper runs matugen,
+which regenerates the colours of the bar, GTK, kitty, rofi, btop, swaync and
+Firefox.
 
 ![Wallpaper picker](docs/img/wallpaper-panel.jpg)
 
-</details>
+The application launcher (`SUPER + CTRL + RETURN`, or the launcher icon in the
+bar) drops from the bar like the other panels. It lists the installed
+applications with their icons and filters them as you type.
 
-## Packages
+![Application launcher](docs/img/launcher.png)
 
-Each folder is a [stow](https://www.gnu.org/software/stow/) package that mirrors `~`, so `hypr/.config/hypr` becomes
-`~/.config/hypr`.
+## Repository structure
 
-| Package                                                     | Becomes                                                      | What it is                                                                                               |
-| ----------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `hypr`                                                      | `~/.config/hypr`                                             | Hyprland config (Lua), keybindings in `conf/keybindings/gabriel.lua`, hyprlock, hypridle                 |
-| `quickshell`                                                | `~/.config/quickshell`                                       | the bar, the desktop widget and all the panels, including Settings                                       |
-| `ml4w`                                                      | `~/.config/ml4w`                                             | ML4W's scripts this setup still uses (wallpaper, cliphist, updates, toggles), settings files, wallpapers |
-| `matugen`                                                   | `~/.config/matugen`                                          | templates for the colours generated from the wallpaper                                                   |
-| `rofi`, `swaync`, `kitty`, `fastfetch`, `btop`, `qt6ct`     | `~/.config/…`                                                | app configs                                                                                              |
-| `nvim`                                                      | `~/.config/nvim`                                             | LazyVim, with LSP, DAP for C, LaTeX and snippets                                                         |
-| `vim`                                                       | `~/.config/vim/.vimrc`                                       | plain vim, for when nvim is not there                                                                    |
-| `yazi`                                                      | `~/.config/yazi`                                             | yazi file manager, extra "Open with" choices (md, pdf, html, svg) and the info-popup plugin              |
-| `browserflags`                                              | `~/.config/chromium-flags.conf`, `~/.config/edge-flags.conf` | Wayland flags for Chromium and Edge                                                                      |
-| `gtk-2.0`, `gtk-3.0`, `gtk-4.0`, `xsettingsd`, `xresources` | `~/.gtkrc-2.0`, `~/.config/…`, `~/.Xresources`               | GTK theme, ArcStarry cursor, kora icons                                                                  |
-| `fonts`                                                     | `~/.local/share/fonts/Fira_Sans`                             | Fira Sans, which the bar, rofi and hyprlock use                                                          |
-| `cursors`                                                   | `~/.local/share/icons/ArcStarry-cursors`                     | the cursor theme                                                                                         |
-| `zsh`                                                       | `~/.zshrc`                                                   | shell config                                                                                             |
-| `ohmyposh`                                                  | `~/Documents/mytheme_v2.toml`                                | prompt theme `.zshrc` loads                                                                              |
-| `systemd`                                                   | `~/.config/systemd/user/hyprland-session.target`             | started by `autostart.lua`                                                                               |
-| `xdg-desktop-portal`                                        | `~/.config/xdg-desktop-portal/portals.conf`                  | Hyprland portal first                                                                                    |
+Each top level directory is a Stow package whose contents mirror the home
+directory. For example, `hypr/.config/hypr` is linked to `~/.config/hypr`.
 
-Stow `systemd`, `xdg-desktop-portal` and `ohmyposh` with `--no-folding`, so
-stow doesn't turn `~/.config/systemd` or `~/Documents` into a link to the repo.
+| Package | Target | Content |
+| --- | --- | --- |
+| `hypr` | `~/.config/hypr` | Hyprland configuration in Lua, keybindings in `conf/keybindings/gabriel.lua`, hypridle and hyprlock |
+| `quickshell` | `~/.config/quickshell` | Status bar, desktop widget and all panels, including Settings and the overview |
+| `ml4w` | `~/.config/ml4w` | ML4W scripts in use (wallpaper, clipboard, updates, toggles) and settings files |
+| `matugen` | `~/.config/matugen` | Templates for the colour scheme derived from the wallpaper, including Pywalfox for Firefox |
+| `rofi`, `swaync`, `kitty`, `fastfetch`, `btop`, `qt6ct` | `~/.config/...` | Application configuration |
+| `nvim` | `~/.config/nvim` | LazyVim with LSP, DAP for C, LaTeX and snippets |
+| `vim` | `~/.config/vim/.vimrc` | Minimal vim configuration for systems without Neovim |
+| `tmux` | `~/.config/tmux` | tmux with `C-Space` as prefix and TPM plugins |
+| `yazi` | `~/.config/yazi` | yazi file manager with additional "Open with" entries |
+| `voxtype` | `~/.config/voxtype` | Push to talk dictation |
+| `browserflags` | `~/.config/chromium-flags.conf`, `~/.config/edge-flags.conf` | Wayland flags for Chromium based browsers |
+| `mimeapps` | `~/.config/mimeapps.list` | Default applications (Vivaldi for web links, Okular for PDF) |
+| `gtk-2.0`, `gtk-3.0`, `gtk-4.0`, `xsettingsd`, `xresources` | `~/.gtkrc-2.0`, `~/.config/...`, `~/.Xresources` | GTK theme, ArcStarry cursor and kora icons |
+| `fonts` | `~/.local/share/fonts` | Fira Sans, used by the bar, rofi and hyprlock |
+| `cursors` | `~/.local/share/icons/ArcStarry-cursors` | Cursor theme |
+| `zsh` | `~/.zshrc` | Shell configuration |
+| `git` | `~/.gitconfig` | Git identity and default branch |
+| `ohmyposh` | `~/Documents/mytheme_v2.toml` | Prompt theme loaded by `.zshrc` |
+| `systemd` | `~/.config/systemd/user/hyprland-session.target` | Session target started by `autostart.lua` |
+| `xdg-desktop-portal` | `~/.config/xdg-desktop-portal/portals.conf` | Hyprland portal as first preference |
+| `wallpapers` | `~/Pictures/Wallpapers` | ML4W's wallpapers, read by the wallpaper picker |
+| `system` | `/etc/sddm.conf`, `/usr/share/sddm/themes/ml4w` | SDDM configuration and theme. Copied as root, not stowed |
 
-## Installing on a new machine
+### What is specific to this PC
 
-Please, verify the packages below. Remember that Copr, AUR, are user packages.
+* **Monitor:** `hypr/.config/hypr/hyprland-gui.lua` (written by HyprMod,
+  profiles in `hypr/.config/hypr/hyprmod/`) sets one monitor, `DP-1` at
+  3440×1440 and 74.98 Hz, scale 1. The outer gaps are 13 px.
+* **NVIDIA:** `conf/environment.lua` loads the `nvidia.lua` variant, which can
+  be changed in the System tab of the Settings panel.
+* **Input:** the keyboard layout is set in `hypr/.config/hypr/input.lua`.
+* **Wallpaper folder:** `~/Pictures/Wallpapers`
+  (`ml4w/.config/ml4w/settings/wallpaper-folder`).
+* **Weather location:** stored in `ml4w/.config/ml4w/settings/statusbar.json`.
 
-1. **Packages.** On Fedora, enable the COPRs listed at the top of
-   `packages-fedora.txt`, then:
+## Installation
 
-   ```bash
-   sudo dnf install $(grep -v '^#' packages-fedora.txt)
-   ```
+The procedure assumes a minimal Arch Linux installation with a working network
+connection and a user with `sudo` rights.
 
-   On Arch:
-
-   ```bash
-   paru -S --needed $(grep -v '^#' packages-arch.txt)
-   ```
-
-   Why am I not listing others? Those are the distros I run, I have not tested this in anything else.
-
-2. **Things to dowloand.** Both package files list them at the
-   top: matugen, oh-my-posh, nwg-displays, the kora icons, grimblast on
-   Fedora, and the calculator and emoji-picker flatpaks.
-
-3. **Stow everything:**
-
-Use GNU Stow to manage these dotfiles.
+### 1. AUR helper
 
 ```bash
-cd ~/.dotfilesLaptop
+sudo pacman -S --needed base-devel git
+git clone https://aur.archlinux.org/paru-bin.git
+cd paru-bin && makepkg -si
+```
+
+### 2. Packages
+
+`packages-arch.txt` contains every package the desktop requires, including the
+dependencies of the qylock lock screen (Qt 6 Declarative, 5Compat and
+Multimedia, and the GStreamer plugins) and `fuse2`/`fuse3` for AppImages. AUR
+packages are marked with a comment.
+
+```bash
+git clone git@github.com:g-machado-uu/dotfilesPC.git ~/.dotfilesPC
+cd ~/.dotfilesPC
+paru -S --needed $(grep -v '^#' packages-arch.txt)
+```
+
+`packages-arch-apps.txt` lists the remaining applications in use, grouped by
+purpose, including the NVIDIA drivers this PC needs.
+
+```bash
+paru -S --needed $(grep -v '^#' packages-arch-apps.txt)
+```
+
+### 3. Browsers
+
+Two browsers are configured. Vivaldi is the default browser (`SUPER + B` and
+`mimeapps.list`). Firefox has its own keybinding (`SUPER + CTRL + F`) and
+receives the matugen colour scheme through Pywalfox.
+
+```bash
+paru -S --needed vivaldi vivaldi-ffmpeg-codecs firefox python-pywalfox
+pywalfox install
+```
+
+The Pywalfox extension must then be installed in Firefox from
+addons.mozilla.org. The wallpaper script calls `pywalfox update` after each
+wallpaper change.
+
+### 4. Stow the packages
+
+Existing files at the target locations must be moved before stowing, since
+Stow does not overwrite them. `~/.zshrc` and `~/.gitconfig` are the usual
+cases.
+
+```bash
+cd ~/.dotfilesPC
+mkdir -p ~/.config ~/.local/share/icons ~/Documents ~/Pictures
 stow hypr quickshell ml4w matugen rofi swaync kitty fastfetch btop qt6ct \
-     nvim vim browserflags gtk-2.0 gtk-3.0 gtk-4.0 xsettingsd xresources \
-     fonts cursors zsh yazi
-stow --no-folding systemd xdg-desktop-portal ohmyposh
+     nvim vim yazi browserflags mimeapps gtk-2.0 gtk-3.0 gtk-4.0 \
+     xsettingsd xresources fonts cursors zsh git
+stow --no-folding systemd xdg-desktop-portal ohmyposh tmux voxtype wallpapers
 fc-cache -f
 ```
 
-`~/.zshrc` is usually a plain file already, so move it aside before
-`stow zsh`.
+The parent directories are created first. On a fresh home directory, Stow
+would otherwise turn `~/.config` itself into a link into the repository.
 
-1. **Log in.** Pick Hyprland at the login screen.
+The packages in the second `stow` line require `--no-folding`, because other
+programs write into the same directories: TPM installs plugins into
+`~/.config/tmux/plugins`, voxtype keeps a `config.toml.bak`, and wallpapers are
+added to `~/Pictures/Wallpapers` locally. Without it those files would end up in
+the repository. The same applies to `~/.local/share/icons`, which is created as
+a regular directory before `cursors` is stowed.
+
+Enabled systemd user units are not part of the repository. After stowing
+`systemd`, re-enable them, for example `systemctl --user enable voxtype`.
+
+### 5. Wallpapers
+
+The `wallpapers` package contains only ML4W's wallpapers. `default.jpg` is the
+fallback used by the scripts. Personal wallpapers are kept outside the
+repository (here in `~/Dropbox/Wallpapers`) and linked file by file into
+`~/Pictures/Wallpapers`, since the wallpaper picker does not read
+subdirectories:
+
+```bash
+ln -s ~/Dropbox/Wallpapers/* ~/Pictures/Wallpapers/
+```
+
+Do not add these wallpapers to the repository. Most are licensed for personal
+use only.
+
+### 6. Login manager
+
+The `system` package targets `/` and contains files read by SDDM before login.
+These are copied rather than linked, since SDDM cannot follow links into a
+home directory. The theme is SilentSDDM as shipped by ML4W's `ml4w-sddm`, with
+its own background (`backgrounds/ml4w.jpg`) and date format, selected by
+`configs/ml4w.conf`.
+
+```bash
+sudo cp system/etc/sddm.conf /etc/sddm.conf
+sudo cp -r system/usr/share/sddm/themes/ml4w /usr/share/sddm/themes/
+sudo systemctl enable sddm
+```
+
+### 7. Lock screen
+
+The lock screen is the `field` theme of
+[qylock](https://github.com/Darkkal44/qylock), a collection of Quickshell and
+SDDM lock screen themes. It is not part of this repository. Its dependencies
+are in `packages-arch.txt`. The repository is cloned to `~/Projects` and its
+Quickshell installer is run, which installs the lock screen to
+`~/.local/share/quickshell-lockscreen` and links the themes back to the clone.
+
+```bash
+git clone https://github.com/Darkkal44/qylock.git ~/Projects/qylock
+cd ~/Projects/qylock
+chmod +x quickshell.sh && ./quickshell.sh
+```
+
+The clone must remain in place, since the installed lock screen reads its
+themes from it. Only the Quickshell part of qylock is used. SDDM keeps the ML4W
+theme from step 6.
+
+### 8. Shell and terminal multiplexer
+
+```bash
+chsh -s /usr/bin/zsh
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+```
+
+The tmux plugins are installed from within tmux with `C-Space I`.
+
+### 9. Session
+
+Hyprland is selected at the SDDM login screen. SDDM starts plain
+`hyprland.desktop`, not uwsm, so `autostart.lua` starts
+`hyprland-session.target`, which brings up `graphical-session.target` and the
+units that depend on it, such as voxtype.
 
 ## Time and weather widget
 
-The widget sits on an empty workspace. Open a window, or switch to a workspace
-that has one, and it is sucked up into the bar, which takes the clock back over
-at the same moment. Once you change to an empty workspace, it will be thrown out
-of the statusbar once again, giving place to a calendar icon, which opens ML4W
-calendar app. It can be switched off in the control centre, under Appearance.
+The widget is displayed on empty workspaces only. When a window opens, the
+widget is absorbed into the bar, which resumes displaying the clock. On an
+empty workspace the clock in the bar is replaced by a calendar button. The
+widget can be disabled from the Appearance page of the control centre.
 
-Above the current conditions it shows the place the weather is for. It is only
-a label; change the place in the control centre or in Settings.
+The widget has three sections: time and date, current conditions, and a three
+day forecast. Weather data is obtained from
+[Open-Meteo](https://open-meteo.com/), which requires no API key. The data is
+refreshed every 15 minutes. Until the first successful request the widget
+retries every 20 seconds, since the network is often unavailable at login.
 
-Three sections: the time with the day and date under it, current conditions,
-and a three-day forecast.
+Wind is reported in METAR notation. `23009G19KT` denotes 230 degrees at 9 knots
+with gusts of 19 knots. Gusts are reported only when they exceed the mean
+speed by 10 knots or more. `QNH` is the pressure at mean sea level in hPa.
 
-Only the workspace decides. Dropping a panel out of the bar leaves the widget
-where it is — the panels are drawn over the top of it — so opening the settings,
-the wallpaper picker or the power menu no longer throws the clock back into the
-bar and out again.
+The text colour is chosen from the brightness of the wallpaper behind the
+widget, independently of the light or dark palette selected by matugen.
 
-While the widget has the time, the bar's clock folds away and a calendar button
-unfolds into the gap it leaves, so the calendar is still one click away from the
-middle of the bar. The two trade places: the button folds itself away again as
-the widget is sucked in and the clock returns.
+The size of the widget and its return delay are set in the Statusbar tab of the
+Settings panel (`weather.widgetScale`, default 0.8, and `weather.showDelay`,
+default 600 ms, in `statusbar.json`). The delay is the time a workspace must
+stay empty before the widget comes back out. It prevents the widget from
+bouncing in and out while an application that briefly closes its window during
+start-up is loading. The widget is still absorbed into the bar without delay.
 
-Weather comes from [Open-Meteo](https://open-meteo.com/), which needs no API
-key. It refreshes every 15 minutes, and retries every 20 seconds until the
-first success, since the network is usually not up yet at login.
+```bash
+qs ipc call statusbar setWeatherWidgetScale 0.9    # 0.5 to 1.5
+qs ipc call statusbar setWeatherShowDelay 1000     # 0 to 10000 ms
+```
 
-Wind is written the way a METAR does: `23009G19KT` is 230° at 9 knots gusting
-19, with the gust shown only when it is 10 knots or more above the mean. Calm
-is `00000KT` and north is `360`. The arrow points the way an aviation wind barb
-does, at the direction the wind comes from. `QNH` is pressure at mean sea level
-in hPa.
+The location is set in any of three places:
 
-Matugen derives the palette from the
-wallpaper, but light and dark are a user choice, so a pale wallpaper can arrive
-with a dark palette. The widget samples the brightness of the wallpaper behind
-it and picks white or near-black ink, and samples again when the wallpaper
-changes.
+* the Statusbar tab of the Settings panel
+* the place name above the weather in the control centre, which becomes a text
+  field when clicked
+* the IPC interface of the bar
 
-### Setting the location
+```bash
+qs ipc call statusbar weatherLocation
+qs ipc call statusbar setWeatherLocation "Porto, PT"
+```
 
-Three ways, all of which end up in the same place:
+## Settings panel
 
-- **Settings panel** → Statusbar tab.
-- **Control centre** → click the place name above the weather. It becomes
-  a text field; Enter or clicking away saves it.
-- **IPC:**
+The Settings panel opens with `SUPER + SHIFT + S`, from the control centre, or
+with `qs ipc call settings toggle`. It has four tabs.
 
-  ```bash
-  qs ipc call statusbar weatherLocation
-  qs ipc call statusbar setWeatherLocation "Porto, PT"
-  ```
-
-The bar owns `~/.config/ml4w/settings/statusbar.json`, so both front ends go
-through its IPC rather than editing the file. A change travels back as a
-binding, so the widget re-geocodes without being told.
-
-## Settings
-
-The separate ML4W settings app is replaced by a panel that drops out of the
-bar, like the control centre. Open it three ways:
-
-- the settings shortcut at the top of the control centre, or `SUPER + SHIFT + S`
-- `qs ipc call settings toggle`
-- the `settings` alias
-
-Four tabs:
-
-- **Appearance:** rofi border and font, wallpaper blur, and the animation,
+* **Appearance:** rofi border and font, wallpaper blur, and the animation,
   decoration, window, layout and workspace variants.
-- **Default apps:** terminal, browser, email, file manager, network and
-  Bluetooth managers, software manager, calculator, screenshot editor and
-  system monitor. There is also an AUR helper row, which only appears on
-  Arch-based systems (read from `/etc/os-release`).
-- **Statusbar:** the weather location.
-- **System:** keybinding, monitor, environment and window-rule variants.
+* **Default apps:** terminal, browser, email client, file manager, network and
+  Bluetooth managers, software manager, calculator, screenshot editor, system
+  monitor and AUR helper.
+* **Statusbar:** weather location, and the size and return delay of the time
+  and weather widget.
+* **System:** keybinding, monitor, environment (here `nvidia`) and window rule
+  variants.
 
-The panel lists whatever
-`quickshell/.config/quickshell/SettingsApp/settings.json` says, so adding a
-setting means adding an entry there. Each entry picks how it is stored:
-`replace` edits a line in place, `overwrite` writes the whole file, and
-`command` runs a `read_command` and a `write_command` instead of touching a
-file at all — which is how the weather location reaches the bar's IPC.
-Changing a Hyprland variant runs `hyprctl reload`.
+The entries are defined in
+`quickshell/.config/quickshell/SettingsApp/settings.json`. Each entry declares
+its storage method: `replace` edits one line of a file, `overwrite` rewrites the
+file, and `command` runs a read command and a write command. Changing a
+Hyprland variant triggers `hyprctl reload`.
 
 ## Keybindings
 
-SUPER is the modifier. `SUPER + CTRL + K` shows the full list; the source is
-`hypr/.config/hypr/conf/keybindings/gabriel.lua`. The ones worth knowing:
+`SUPER` is the modifier. `SUPER + CTRL + K` displays the complete list. The
+source is `hypr/.config/hypr/conf/keybindings/gabriel.lua`.
 
-| Keys                                      | Does                                              |
-| ----------------------------------------- | ------------------------------------------------- |
-| `SUPER + RETURN` / `B` / `E`              | terminal, browser, file manager                   |
-| `SUPER + CTRL + RETURN`                   | application launcher                              |
-| `SUPER + SPACE`                           | expand the bar and give it keyboard focus         |
-| `SUPER + CTRL + S`                        | control centre                                    |
-| `SUPER + CTRL + W`                        | wallpaper picker                                  |
-| `SUPER + V`                               | clipboard history                                 |
-| `SUPER + ALT + M`                         | the floating bubble system monitor                |
-| `SUPER + SHIFT + M`                       | light / dark                                      |
-| `SUPER + CTRL + P`                        | power menu                                        |
-| `SUPER + CTRL + L`                        | lock                                              |
-| `SUPER + ALT + F` / `ALT + S` / `ALT + A` | full-screen, area, and text-from-area screenshots |
+| Keys | Action |
+| --- | --- |
+| `SUPER + RETURN` | Terminal (kitty) |
+| `SUPER + B` | Default browser (Vivaldi) |
+| `SUPER + CTRL + F` | Firefox |
+| `SUPER + E` | File manager |
+| `SUPER + CTRL + RETURN` | Application launcher |
+| `SUPER + TAB` | Workspace overview |
+| `SUPER + SPACE` | Expand the bar and give it keyboard focus |
+| `SUPER + CTRL + S` | Control centre |
+| `SUPER + SHIFT + S` | Settings panel |
+| `SUPER + CTRL + W` | Wallpaper picker |
+| `SUPER + V` | Clipboard history |
+| `SUPER + ALT + M` | System monitor panel |
+| `SUPER + SHIFT + M` | Toggle light and dark mode |
+| `SUPER + CTRL + M` | Voxtype dictation, held while speaking |
+| `SUPER + CTRL + P` | Power menu |
+| `SUPER + CTRL + L` | Lock screen |
+| `SUPER + Q` | Close the open bar panel, or the active window |
+| `SUPER + ALT + F` | Full screen screenshot |
+| `SUPER + ALT + S` | Area screenshot |
+| `SUPER + ALT + A` | Text extraction from an area (tesseract) |
 
-## Power menu
+## Application launcher
 
-The power panel follows the
-[Hyprland wiki](https://wiki.hypr.land/Hypr-Ecosystem/hyprshutdown/): logout,
-reboot and power off go through `hyprshutdown`, which asks every app to close
-before Hyprland exits instead of killing them. Lock goes through
-`loginctl lock-session`, so hypridle starts hyprlock; when hypridle is stopped
-(caffeine mode), it runs hyprlock directly. `SUPER + CTRL + L` does the same.
+The launcher replaces rofi's `drun` mode. It reads the same `.desktop` files
+through Quickshell, so it lists the same applications. The source is
+`quickshell/.config/quickshell/LauncherApp/LauncherPanel.qml`.
 
-This laptop uses SDDM with NVIDIA. If logging out ever leaves a black screen,
-the wiki's fix is adding `--vt <n>` to the `hyprshutdown` calls in
-`quickshell/.config/quickshell/PowerApp/PowerPanel.qml`, where `n` is the VT
-SDDM runs on.
+* **Search:** names that start with the query rank first, then words in the
+  name that start with it, then the generic name and keywords, then the
+  description. Letters typed in order also match, so `vsc` finds Visual Studio
+  Code.
+* **Most used first:** each launch is counted in
+  `~/.local/state/quickshell/by-shell/<id>/launcher-usage.json`. The most used
+  applications head the list when the search is empty and are ranked higher in
+  the results. The file is per machine and not part of the repository.
+* **Keys:** `Up` and `Down`, `Tab` and `Shift + Tab`, or `Ctrl + J` and
+  `Ctrl + K` move the selection. `Page Up` and `Page Down` move eight entries.
+  `Return` launches and `Escape` closes.
+* **Terminal applications** are opened in the terminal set in the Default apps
+  tab of the Settings panel.
+
+The launcher is also opened with `qs ipc call launcher toggle`. Rofi remains
+installed for the screenshot, OCR and keybinding menus, and
+`hypr/.config/hypr/scripts/launcher.sh` still opens its launcher.
+
+## Memory use
+
+The bar panels are created when they open and destroyed shortly after they
+close, instead of existing from startup. The workspace overview runs inside
+the main Quickshell process and is loaded when it is first opened. It is
+unloaded after one minute closed. `ml4w-autostart` no longer starts a second
+`qs` process for it.
+
+## Power menu and screen lock
+
+Logout, reboot and power off are executed through `hyprshutdown`, as
+recommended by the
+[Hyprland wiki](https://wiki.hypr.land/Hypr-Ecosystem/hyprshutdown/). This asks
+each application to close before Hyprland exits.
+
+Locking is performed through `loginctl lock-session`, which hypridle handles.
+The lock command in `hypridle.conf` and in the keybinding calls
+`~/.local/share/quickshell-lockscreen/lock.sh`, the Quickshell lock screen
+from qylock (see [Lock screen](#7-lock-screen)). `lock.sh` uses the `field`
+theme unless another theme name is passed as its first argument, for example
+`lock.sh clockwork/tape`. The previous hyprlock commands remain as comments in
+both files.
+
+This PC uses SDDM with an NVIDIA GPU. If logging out leaves a black screen,
+add `--vt <n>` to the `hyprshutdown` calls in
+`quickshell/.config/quickshell/PowerApp/PowerPanel.qml`, where `n` is the
+virtual terminal used by SDDM.
 
 ## Notifications
 
-swaync still handles notifications. The control centre shows the count and hands
-the list over to swaync's window.
+Notifications are handled by swaync. The control centre displays the number of
+pending notifications and opens the swaync window.
 
 ## Changes from ML4W
 
-**Removed:**
+**Removed**
 
-- waybar and its themes
-- the ML4W dock (nwg-dock-hyprland)
-- walker, waypaper and wlogout configs
-- the welcome app and ML4W's separate settings app
-- the theme switcher (`ml4w/themes`), which only switched waybar, dock and
-  walker themes
-- ML4W's own install and update scripts
-- about 20 scripts nothing calls
-- matugen outputs for the removed apps
-- the fastfetch toggle in the sidebar
-- Dock, I like more screen real estate, so I removed the app.
+* waybar and its themes
+* the ML4W dock (nwg-dock-hyprland)
+* the walker, waypaper and wlogout configurations
+* the welcome application and the ML4W settings application
+* the theme switcher (`ml4w/themes`), which only affected waybar, the dock and
+  walker
+* the ML4W installation and update scripts
+* approximately 20 scripts without callers
+* matugen outputs for the removed applications
 
-**Replaced:**
+**Replaced**
 
-- the settings app, with the Settings panel
-- `ml4w-power`, with the `hyprshutdown` calls above
-- the launcher script, with rofi only
-- the status bar toggle and reload scripts, with Quickshell only
+* the settings application, by the Settings panel
+* `ml4w-power`, by `hyprshutdown`
+* the launcher script, by the Quickshell launcher
+* the status bar toggle and reload scripts, by Quickshell IPC calls
 
-**Edited:**
+**Modified**
 
-- **Sidebar:** merged into the control centre. The duplicate volume, brightness,
-  wallpaper and settings controls, the screenshot button and the status bar
-  switch and menu are gone (`SUPER + CTRL + B` and `SUPER + SHIFT + B` cover
-  the bar); gamemode is a tile and the theme tools are on the Appearance page.
-- **`SUPER + Q`:** closes any open bar panel first.
-- **Wallpaper script and GTK theme listener:** no longer restart waybar or the
-  dock.
-- **Autostart log:** written to `~/.cache/ml4w-autostart.log` instead of
-  `~/.mydotfiles/`.
-- **Kept on purpose:** the paths under `~/.config/ml4w`, and ML4W's wallpaper
-  script (`ml4w-wallpaper`), so nothing that already worked had to change.
+* **Sidebar:** merged into the control centre. Duplicated controls were
+  removed. Gamemode became a tile, and the theme tools moved to the Appearance
+  page.
+* **`SUPER + Q`:** closes an open bar panel before closing windows.
+* **Wallpaper script and GTK theme listener:** no longer restart waybar or the
+  dock. The wallpaper script also updates Pywalfox.
+* **Autostart:** the log is written to `~/.cache/ml4w-autostart.log`, and the
+  overview is no longer started as a separate process.
+* **Retained:** the paths under `~/.config/ml4w` and the `ml4w-wallpaper`
+  script, so that existing callers remain valid.
 
-**Mine, on top of ML4W:**
+**Added**
 
-- the Quickshell bar and its panels
-- The keyboard layout display
-- the desktop time and weather widget
-- the keybindings and the fluidDrop animation
-- the window rules, and the hypridle, kitty, fastfetch, nvim and vim configs
+* the Quickshell bar and its panels
+* the keyboard layout indicator
+* the time and weather widget
+* the application launcher
+* the keybindings and the fluidDrop animation
+* the window rules, and the hypridle, kitty, fastfetch, nvim, vim, tmux and
+  voxtype configurations
+* the SDDM theme configuration in `system/`
 
-`ML4W_BASELINE` and `./upstream-diff.sh` show what ML4W changed upstream, so
-fixes can be picked by hand. `--mine` lists my side of it, removals included.
+`ML4W_BASELINE` records the upstream version. `./upstream-diff.sh` lists the
+upstream changes since that version in the directories this repository
+replaces. `./upstream-diff.sh --mine` lists the local changes relative to the
+baseline.
 
-## Known gaps
+## Known limitations
 
-- **Polkit agent:** `autostart.lua` starts polkit-gnome from
-  `/usr/lib/polkit-gnome/`, which is where Arch installs it. Fedora doesn't
-  package polkit-gnome, so this laptop runs without a polkit agent;
-  `mate-polkit` is Fedora's closest equivalent. This comes from ML4W and is
-  unchanged here.
-- **grimblast:** not in Fedora's repos or the COPRs above. `screenshot.sh` uses
-  it for some modes.
-- **Arch list:** `packages-arch.txt` comes from ML4W's Arch lists and couldn't
-  be checked from this machine.
-- **`SUPER + CTRL + C`** is bound twice, to the calculator and to the calendar
-  panel.
+* **Lock screen:** depends on qylock, which is installed separately. Without
+  it, `SUPER + CTRL + L` and the idle timeout do not lock the session.
+* **Filen:** `autostart.lua` starts `~/Applications/Filen`, an AppImage that is
+  installed manually. AppImages require `fuse2`, which is in
+  `packages-arch.txt`.
+* **`SUPER + CTRL + C`** is bound twice, to the calculator and to the calendar.
+* **Bubble system monitor:** `quickshell/.config/quickshell/SysMonitor` is
+  kept but no longer started. `SUPER + ALT + M` opens the System panel of the
+  bar instead.
 
 ## Credits and licences
 
-- **ML4W OS** by Stephan Raabe, GPL-3.0 — the starting point, and the
-  wallpapers in `ml4w/.config/ml4w/wallpapers`.
-- **Everything derived from ML4W:** GPL-3.0 (`LICENSE`).
-- **Fira Sans:** SIL Open Font License
+* **ML4W OS** by Stephan Raabe, GPL 3.0. The basis of this configuration, the
+  SDDM theme setup and the source of the wallpapers in the `wallpapers`
+  package.
+* **Files derived from ML4W:** GPL 3.0 (`LICENSE`).
+* **SilentSDDM**, the SDDM theme installed by ML4W.
+* **Fira Sans:** SIL Open Font License
   (`fonts/.local/share/fonts/Fira_Sans/OFL.txt`).
-- **ArcStarry cursors:** GPL-3.0 (`LICENSE`).
-- **`quickshell/overview`:** a separate project, with its own README.
+* **ArcStarry cursors:** GPL 3.0.
+* **`quickshell/overview`:** a separate project with its own README. The main
+  shell loads it on demand instead of running it as a second Quickshell
+  process.
+* **qylock** by Darkkal44, the lock screen. Installed separately, not
+  redistributed here.

@@ -29,11 +29,13 @@ hl.bind(
 	{ description = "Open the calculator" }
 )
 
--- Floating bubble system monitor (CPU / RAM / GPU / VRAM / temp)
+-- System monitor panel from the statusbar
+-- (the old floating-bubble monitor is parked in ~/.config/quickshell/SysMonitor;
+--  its toggle was ~/.config/quickshell/SysMonitor/sysmonitor.sh)
 hl.bind(
 	mainMod .. " + ALT + M",
-	hl.dsp.exec_cmd("~/.config/quickshell/SysMonitor/sysmonitor.sh"),
-	{ description = "Toggle the bubble system monitor" }
+	hl.dsp.exec_cmd("qs ipc call system toggle"),
+	{ description = "Open system monitor from statusbar" }
 )
 -- fr keyboard layout setup
 local is_fr = false
@@ -207,7 +209,7 @@ hl.bind(
 )
 hl.bind(
 	mainMod .. " + CTRL + RETURN",
-	hl.dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"),
+	hl.dsp.exec_cmd("qs ipc call launcher toggle"),
 	{ description = "Open application launcher" }
 )
 hl.bind(
@@ -279,7 +281,7 @@ hl.bind(
 )
 hl.bind(
 	mainMod .. " + Tab",
-	hl.dsp.exec_cmd("qs -p ~/.config/quickshell/overview ipc call overview toggle"),
+	hl.dsp.exec_cmd("qs ipc call overview toggle"),
 	{ description = "Open Select Window Menu" }
 )
 
@@ -291,13 +293,6 @@ hl.bind(
 	mainMod .. " + SHIFT + S",
 	hl.dsp.exec_cmd("qs ipc call settings toggle"),
 	{ description = "Open Settings panel" }
-)
-
--- System monitor panel from statusbar
-hl.bind(
-	mainMod .. " + CTRL + ESCAPE",
-	hl.dsp.exec_cmd("qs ipc call system toggle"),
-	{ description = "Open system monitor from statusbar" }
 )
 
 -- Scroll through existing workspaces with mainMod + scroll
