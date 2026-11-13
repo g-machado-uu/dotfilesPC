@@ -33,7 +33,19 @@ Item {
     // every other surface, so the bar module under the cursor would see the
     // pointer leave the moment the panel appeared, and the panel would close
     // again straight away. Such a panel is closed by the pointer leaving instead.
+    // Also off for a panel that opens *beside* another one and lets that one
+    // hold the grab for the pair (see grabAlso).
     property bool grabFocus: true
+
+    // Further windows this panel's grab should treat as its own, so a second
+    // panel open beside it can be clicked without the grab reading that as a
+    // click outside and dismissing everything. The control centre passes the
+    // notification list here while the two are side by side.
+    property var grabAlso: []
+
+    // This panel's own surface, which is what another panel puts in its
+    // grabAlso.
+    readonly property var grabWindow: popup
     // True while the pointer is over the panel body.
     readonly property bool hovered: bodyHover.hovered
 
@@ -139,8 +151,9 @@ Item {
         implicitHeight: panel.panelHeight + panel.padY
 
         // Click anywhere outside to dismiss, the same primitive the bar uses.
+        // "Outside" means outside this panel and anything in grabAlso.
         HyprlandFocusGrab {
-            windows: [popup]
+            windows: [popup].concat(panel.grabAlso)
             active: panel.open && panel.grabFocus
             onCleared: panel.dismissed()
         }

@@ -7,6 +7,14 @@ import qs.CustomTheme
 // volume readouts so the whole bar reads as a single row of text. The date is
 // revealed when the bar expands and folds away again when it collapses, so the
 // collapsed pill stays as narrow as it was.
+//
+// While the date is out, the time and the date are given a cell each of the
+// same width — the wider of the two — so the hairline rule between them sits
+// exactly at the module's centre. The module is the middle of the bar's centre
+// group (a 30px button either side of it) and the bar is centred on the screen,
+// so that rule is then exactly at the centre of the screen. Sized to the text
+// instead, the rule sat as far left of centre as the date is wider than the
+// time. Collapsed, the time cell hugs its text again so the pill stays narrow.
 Item {
     id: clockRoot
 
@@ -79,21 +87,42 @@ Item {
         }
     }
 
+    // The width each of the two fields is given while both are out. Taken from
+    // the text itself rather than from a guess, so it follows the formats in
+    // statusbar.json and the font.
+    readonly property real sideWidth:
+        Math.max(timeText.implicitWidth, dateText.implicitWidth)
+
     RowLayout {
         id: row
         anchors.centerIn: parent
         spacing: 0
 
-        Text {
-            id: timeText
+        // The time, right-aligned in its half so it sits against the rule.
+        Item {
             Layout.alignment: Qt.AlignVCenter
-            text: Qt.formatDateTime(clock.date, clockRoot.timeFormat)
-            color: Theme.primary
-            font.family: Theme.fontFamily
-            font.pixelSize: 14
-            font.bold: true
-            // Tabular digits: "11:11" and "08:08" take the same width.
-            font.features: { "tnum": 1 }
+            // Expanded: half of a symmetric pair. Collapsed: just the text, so
+            // the folded clock has no blank space in front of it.
+            implicitWidth: clockRoot.expanded
+                ? clockRoot.sideWidth : timeText.implicitWidth
+            implicitHeight: timeText.implicitHeight
+
+            Behavior on implicitWidth {
+                NumberAnimation { duration: 250; easing.type: Easing.OutQuint }
+            }
+
+            Text {
+                id: timeText
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: Qt.formatDateTime(clock.date, clockRoot.timeFormat)
+                color: Theme.primary
+                font.family: Theme.fontFamily
+                font.pixelSize: 14
+                font.bold: true
+                // Tabular digits: "11:11" and "08:08" take the same width.
+                font.features: { "tnum": 1 }
+            }
         }
 
         // A hairline rule rather than punctuation: it separates the two fields
@@ -125,7 +154,7 @@ Item {
         // The date, folded to zero width (and clipped) while collapsed.
         Item {
             Layout.alignment: Qt.AlignVCenter
-            implicitWidth: clockRoot.expanded ? dateText.implicitWidth : 0
+            implicitWidth: clockRoot.expanded ? clockRoot.sideWidth : 0
             implicitHeight: dateText.implicitHeight
             clip: true
             opacity: clockRoot.expanded ? 1 : 0

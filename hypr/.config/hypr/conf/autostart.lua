@@ -41,9 +41,6 @@ hl.on("hyprland.start", function()
 	-- Load GTK settings
 	hl.exec_cmd("~/.config/hypr/scripts/gtk.sh")
 
-	-- Start swaync
-	hl.exec_cmd("swaync")
-
 	-- Start hypridle
 	hl.exec_cmd("hypridle")
 

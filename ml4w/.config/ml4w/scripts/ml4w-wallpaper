@@ -136,12 +136,6 @@ reload_pywalfox() {
     info "Pywalfox updated"
 }
 
-reload_swaync() {
-    sleep 0.1
-    swaync-client -rs
-    info "SwayNC refreshed"
-}
-
 generate_image_variants() {
     magick "$IMAGE_PATH" -resize 75% "$BLURRED_WALLPAPER"
     if [ "$BLUR" != "0x0" ]; then
@@ -231,7 +225,6 @@ else
     run_matugen
     reload_quickshell
     reload_pywalfox
-    reload_swaync
     generate_image_variants
 fi
 send_notification "Wallpaper Updated" "$(basename "$IMAGE_PATH")${MONITOR_OUTPUT:+ on output $MONITOR_OUTPUT}"

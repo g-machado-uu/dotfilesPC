@@ -1,9 +1,9 @@
 import QtQuick
 import qs.CustomTheme
 
-// The control centre's one text button: an outlined pill that fills with the
-// accent on hover. Used wherever an action opens or runs something, so every
-// such action in the panel looks the same.
+// An outlined pill that fills with the accent on hover: the text button of the
+// control centre and the notification list. Used wherever an action opens or
+// runs something, so every such action in a panel looks the same.
 Rectangle {
     id: pill
     property string text: ""

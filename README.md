@@ -26,6 +26,19 @@ convention.
 
 ![Status bar](docs/img/statusbar.png)
 
+Two things in that layout are deliberate. **The clock is the centre of the
+screen:** the centre group is the launcher icon, the clock and the control
+centre icon, a 30px button either side of the clock, and while the date is out
+the clock gives the time and the date a cell each of the same width — so the
+hairline rule between them lands exactly on the centre of the screen rather
+than as far left of it as the date is wider than the time. **The media module
+is in the left group**, to the right of the terminal icon, and holds a fixed
+slot whether or not anything is playing: the title is elided into a constant
+box and the slot keeps its width when the last player goes away, so neither a
+track change nor a player appearing resizes the bar. In the centre group it
+pushed the clock off the middle of the screen; anywhere, at its natural width,
+it made the bar twitch.
+
 The control centre (`SUPER + CTRL + S`) contains network and Bluetooth tiles,
 Do Not Disturb, Caffeine, Night Light, Gamemode, audio and brightness sliders,
 an Appearance page, the weather and the active media player.
@@ -38,7 +51,7 @@ application.
 ![Settings panel](docs/img/settings-panel.jpg)
 
 The wallpaper picker (`SUPER + CTRL + W`). Selecting a wallpaper runs matugen,
-which regenerates the colours of the bar, GTK, kitty, rofi, btop, swaync and
+which regenerates the colours of the bar, GTK, kitty, rofi, btop and
 Firefox.
 
 ![Wallpaper picker](docs/img/wallpaper-panel.jpg)
@@ -60,7 +73,7 @@ directory. For example, `hypr/.config/hypr` is linked to `~/.config/hypr`.
 | `quickshell` | `~/.config/quickshell` | Status bar, desktop widget and all panels, including Settings and the overview |
 | `ml4w` | `~/.config/ml4w` | ML4W scripts in use (wallpaper, clipboard, updates, toggles) and settings files |
 | `matugen` | `~/.config/matugen` | Templates for the colour scheme derived from the wallpaper, including Pywalfox for Firefox |
-| `rofi`, `swaync`, `kitty`, `fastfetch`, `btop`, `qt6ct` | `~/.config/...` | Application configuration |
+| `rofi`, `kitty`, `fastfetch`, `btop`, `qt6ct` | `~/.config/...` | Application configuration |
 | `nvim` | `~/.config/nvim` | LazyVim with LSP, DAP for C, LaTeX and snippets |
 | `vim` | `~/.config/vim/.vimrc` | Minimal vim configuration for systems without Neovim |
 | `tmux` | `~/.config/tmux` | tmux with `C-Space` as prefix and TPM plugins |
@@ -148,7 +161,7 @@ cases.
 ```bash
 cd ~/.dotfilesPC
 mkdir -p ~/.config ~/.local/share/icons ~/Documents ~/Pictures
-stow hypr quickshell ml4w matugen rofi swaync kitty fastfetch btop qt6ct \
+stow hypr quickshell ml4w matugen rofi kitty fastfetch btop qt6ct \
      nvim vim yazi browserflags mimeapps gtk-2.0 gtk-3.0 gtk-4.0 \
      xsettingsd xresources fonts cursors zsh git
 stow --no-folding systemd xdg-desktop-portal ohmyposh tmux voxtype wallpapers
@@ -286,8 +299,9 @@ with `qs ipc call settings toggle`. It has four tabs.
 * **Default apps:** terminal, browser, email client, file manager, network and
   Bluetooth managers, software manager, calculator, screenshot editor, system
   monitor and AUR helper.
-* **Statusbar:** weather location, and the size and return delay of the time
-  and weather widget.
+* **Statusbar:** weather location, the size and return delay of the time and
+  weather widget, and how long the notification card takes to grow out of the
+  control centre.
 * **System:** keybinding, monitor, environment (here `nvidia`) and window rule
   variants.
 
@@ -345,9 +359,60 @@ through Quickshell, so it lists the same applications. The source is
 * **Terminal applications** are opened in the terminal set in the Default apps
   tab of the Settings panel.
 
-The launcher is also opened with `qs ipc call launcher toggle`. Rofi remains
-installed for the screenshot, OCR and keybinding menus, and
-`hypr/.config/hypr/scripts/launcher.sh` still opens its launcher.
+The launcher is also opened with `qs ipc call launcher toggle`.
+
+Rofi is kept as a fallback, not as part of the desktop: nothing in the rice
+opens it any more. `hypr/.config/hypr/scripts/launcher.sh` still opens its
+`drun` launcher, and `scripts/screenshot.sh` still has its rofi menus when run
+with no arguments, but neither is on a keybinding — `SUPER + PRINT` is
+Flameshot and `SUPER + CTRL + RETURN` is the Quickshell launcher. The package,
+the `rofi` Stow package and the matugen rofi template all stay in place, so
+either is one keybinding away again.
+
+## Keybindings panel
+
+`SUPER + CTRL + K` drops the complete list of keybindings out of the bar, or
+`qs ipc call keybinds toggle`. The source is
+`quickshell/.config/quickshell/KeybindsApp/KeybindsPanel.qml`; it replaced
+`scripts/keybindings.sh`, which piped `hyprctl binds` through jq and awk into a
+two-line rofi list.
+
+It reads the same thing: `hyprctl binds -j`, keeping every bind that carries a
+description — which is what makes `conf/keybindings/gabriel.lua` the one place
+a keybinding is written down, since the description in the bind is the text
+shown here. Reading the JSON directly means the modifier names are built in
+QML rather than in awk, and the combo is shown in a chip beside its
+description.
+
+Typing filters the list, and each word of the query has to appear somewhere in
+the row, so `super w` finds the wallpaper binds whichever order they are typed
+in. `Up` and `Down`, `Tab` and `Shift + Tab`, or `Ctrl + J` and `Ctrl + K`
+move the selection; `Page Up` and `Page Down` move eight rows; `Escape`
+closes. Nothing is clickable: the list is a reference, not a menu.
+
+## Text extraction
+
+`SUPER + ALT + A` drops the OCR language picker out of the bar, or
+`qs ipc call ocr toggle`. Picking a language closes the panel and starts the
+capture: `hyprpicker` freezes the screen, `slurp` takes the region, and
+`grim`, ImageMagick and `tesseract` turn it into text on the clipboard.
+
+The work is still `hypr/.config/hypr/scripts/text-extractor.sh`; only its rofi
+language prompt moved into the panel
+(`quickshell/.config/quickshell/OcrApp/OcrPanel.qml`). The script keeps the
+language list, so there is only one of them:
+
+```bash
+text-extractor.sh --list-langs    # the installed languages, one per line
+text-extractor.sh --lang deu      # capture with a given language
+text-extractor.sh                 # capture with the only one installed, or eng
+```
+
+The panel lists what `--list-langs` reports, under the language's name where
+it knows one, and runs the script with `--lang`. `osd` (tesseract's
+orientation and script detection data, not a language) is filtered out. The
+capture starts a moment after the panel closes, so neither hyprpicker's
+overlay nor slurp's region lands on top of it.
 
 ## Memory use
 
@@ -379,8 +444,109 @@ virtual terminal used by SDDM.
 
 ## Notifications
 
-Notifications are handled by swaync. The control centre displays the number of
-pending notifications and opens the swaync window.
+The shell is its own notification daemon. It implements the Desktop
+Notifications specification through Quickshell's `NotificationServer`, so it
+owns `org.freedesktop.Notifications` and `notify-send` and every application
+reach it directly. The daemon is
+`quickshell/.config/quickshell/NotificationApp/NotificationService.qml`, named
+in `shell.qml` so that it comes up with the shell rather than with whichever
+bar module happens to read it first.
+
+It is deliberately quiet: **nothing is drawn over the desktop.** A notification
+arriving swells the dot under the control centre icon three times and then
+leaves it there, which is the whole of the alert. The notifications themselves
+wait in the control centre.
+
+The control centre's Notifications row shows the count and has two buttons.
+`Clear all` dismisses everything; `Open` grows the list sideways out of the
+control centre's right edge, and closing it sucks the card back in. The
+control centre itself never moves, and neither does the bar.
+
+The card (`shared/SideCard.qml`) grows out of the control centre rather than
+appearing beside it, the way a branch grows off a trunk. It starts as a nub
+level with the NOTIFICATIONS row whose `Open` button summoned it, and opens out
+rightwards and downwards. It stands 12px clear of the control centre and is
+joined to it only by a short stem at its top left, so the card is square only
+at the corner that stem meets and rounded on the other three. It is allowed to
+sit past the bar's right edge, because it belongs to the control centre rather
+than to the bar.
+
+The stem meets the control centre the way the bar meets the top of the screen:
+a concave quarter-arc tangent to the panel's edge, so the branch thickens into
+the trunk instead of being butted against it. It is the same idea as
+`BarShape`'s flares turned on its side — that one grows out of a horizontal
+surface, this one out of a vertical edge — which is why the stem is a `Shape`
+and not a rectangle, and why it is drawn exactly adjacent to the card rather
+than overlapping it: these surfaces are translucent, and two of them over one
+another would show as a darker band down the joint.
+
+The joint has no square corner at either end. Its underside is one continuous
+valley made of two identical quarter-arcs, each reaching half the gap across,
+so they meet in the exact middle with a horizontal tangent on both sides and
+the joint is symmetric. The card-side arc lands on the rule under the card's
+header, which the card reports as `dividerY` — the stem's height follows from
+that rather than being a number of its own, so the joint always ends on a line
+that is already there. Measured across the 18px gap, with the card's top as
+zero: the underside runs +47, +45, +44, +43, +42, +42 … +42, +43, +44, +45,
++47, reaching +52 (the rule) at the card's edge.
+
+The knobs are `attachGap` (18) and `attachFlare` (half the gap, the radius of
+every sweep) on the `SideCard` in `StatusbarWindow.qml`.
+
+The growth is two curves, not one: the width runs ahead on a decelerating
+curve, so the card has reached most of the way across while it is still only a
+nub tall, and the height follows on an ease-in-out that does most of its work
+in the second half. It reaches out first and fills out second.
+
+How long it takes is `notifications.spawnDuration` in `statusbar.json`
+(default 320 ms), also on the Statusbar tab of the Settings panel and over
+IPC:
+
+```bash
+qs ipc call statusbar notificationSpawn
+qs ipc call statusbar setNotificationSpawn 550    # 0 to 2000 ms
+```
+
+(It is not called `animationDuration` because the persist helpers match a key
+by name across the whole document, and `pill` already has one.)
+
+The whole animation is the size of one rounded rectangle, and it was written
+that way on purpose. The first version slid the control centre
+left to make room and widened the bar to cover the pair, which meant asking
+the compositor to reposition a mapped popup on every frame while the bar
+re-tessellated its own silhouette; it was visibly laggy. Nothing in the card
+now resizes a window, moves a surface or re-lays-out the list. The content is
+not even drawn while the card is growing (a clip rectangle that changes every
+frame with text inside it makes Qt rebuild its render batches on each one,
+measured at ~4.7 ms of CPU per frame); it fades in once the card is open, so
+the growth is one quad a frame. A card transition costs about 50 ms of CPU.
+
+The list inside is `NotificationApp/NotificationPanel.qml`:
+
+* Newest first, each card with the application icon and name, how long ago it
+  arrived, the summary, the body and whatever action buttons the notification
+  carries. An urgent notification is outlined.
+* A `×` appears on a card under the pointer and dismisses that one.
+* `qs ipc call notificationlist toggle` opens the control centre and the card
+  together from a script.
+
+A notification is kept until it is dismissed. The `expireTimeout` an
+application asks for is ignored, because there is no popup for it to time out
+of. Notifications marked *transient* — the volume and brightness overlays — are
+dropped instead of collected, since they are meant to be seen on screen and
+there is no screen for them here.
+
+**Do Not Disturb** is the tile in the control centre. Notifications still
+collect while it is on; what stops is the dot pulsing for them. Urgent
+notifications pulse regardless, which is what marking one urgent is for. The
+state is kept in `~/.config/ml4w/settings/notifications.json` so it survives a
+restart, and is read back on change so every bar agrees.
+
+This replaced swaync, which was the notification daemon until then. Only one
+notification server can own the D-Bus name, so swaync must not be running:
+it is no longer started in `conf/autostart.lua`, and `swaync` is no longer in
+`packages-arch.txt`. After the change, `pkill swaync` hands the name over
+without a logout — the shell registers it as soon as it is free.
 
 ## Changes from ML4W
 
@@ -395,6 +561,9 @@ pending notifications and opens the swaync window.
 * the ML4W installation and update scripts
 * approximately 20 scripts without callers
 * matugen outputs for the removed applications
+* the wallpaper effects entry in the wallpaper panel and its `ml4w-wallpaper-effects`
+  picker. `ml4w-wallpaper --effect NAME` and `hypr/.config/hypr/effects/wallpaper/`
+  are untouched, so the effects are still there from the command line.
 
 **Replaced**
 
@@ -402,6 +571,12 @@ pending notifications and opens the swaync window.
 * `ml4w-power`, by `hyprshutdown`
 * the launcher script, by the Quickshell launcher
 * the status bar toggle and reload scripts, by Quickshell IPC calls
+* swaync, by the shell's own notification daemon (see
+  [Notifications](#notifications))
+* `ml4w-cliphist`, by the clipboard panel on `SUPER + V`
+* `scripts/keybindings.sh`, by the keybindings panel on `SUPER + CTRL + K`
+* the rofi language prompt inside `scripts/text-extractor.sh`, by the OCR
+  panel on `SUPER + ALT + A`
 
 **Modified**
 
@@ -418,7 +593,8 @@ pending notifications and opens the swaync window.
 
 **Added**
 
-* the Quickshell bar and its panels
+* the Quickshell bar and its panels, including the notification list, the
+  keybindings cheat sheet and the OCR language picker
 * the keyboard layout indicator
 * the time and weather widget
 * the application launcher

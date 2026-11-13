@@ -16,7 +16,7 @@ Default configuration file for the Quickshell Statusbar.
     "animationDuration": 350
   },
   "modules": {
-    "left": ["workspaces", "terminal"],
+    "left": ["workspaces", "terminal", "media"],
     "center": ["launcher", "clock", "calendar", "controlcentre"],
     "right": [
       "updates",
@@ -51,5 +51,8 @@ Default configuration file for the Quickshell Statusbar.
     "desktopWidget": true,
     "widgetScale": 0.8,
     "showDelay": 600
+  },
+  "notifications": {
+    "spawnDuration": 320
   }
 }

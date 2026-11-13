@@ -9,13 +9,14 @@ import QtQuick.Shapes
 import qs.CustomTheme
 import qs.shared
 import qs.DesktopWidget
+import qs.NotificationApp
 
 // The control centre that drops out of the sliders icon in the status bar
 // (SUPER + CTRL + S). It also took over the old sidebar.
 //
 // Top to bottom, from what is changed most to what is only glanced at:
-// shortcuts to the other panels, quick toggles, the notification count, the
-// output and input levels, the way into the Appearance page, the weather, and
+// shortcuts to the other panels, quick toggles, the notifications, the output
+// and input levels, the way into the Appearance page, the weather, and
 // whatever is playing last. Media keeps a fixed slot at the bottom, so a
 // player appearing or disappearing never moves anything above it.
 //
@@ -30,6 +31,12 @@ Item {
     readonly property real panelHeight: mainPage.implicitHeight
         + mainPage.anchors.topMargin + mainPage.anchors.bottomMargin
 
+    // Where the notification card grows out of this panel's right edge: the top
+    // of the NOTIFICATIONS row, in panel coordinates, so the card appears to
+    // come out of the row whose Open button summoned it. mainPage is anchored
+    // with a margin all round, so its y is that margin.
+    readonly property real notificationsRowY: mainPage.y + notificationsRow.y
+
     // Mirrors the hosting panel's state. Polling and animations only run while
     // the panel is actually on screen.
     property bool isOpen: false
@@ -38,6 +45,10 @@ Item {
     // panel. A signal rather than IPC, so with a bar per monitor it opens on
     // the bar that was clicked, not on the focused monitor's.
     signal soundRequested()
+    // The notification list, which drops out beside this panel rather than in
+    // place of it. A signal for the same reason as soundRequested: with a bar
+    // per monitor it has to open on the bar that was clicked.
+    signal notificationsRequested()
 
     // Place name to look up, e.g. "Belfast, UK". Set from the bar's settings.
     property string location: "Belfast, UK"
@@ -48,15 +59,18 @@ Item {
     // TOGGLE STATE
     // ------------------------------------------------------------------
     // Read by polling rather than through a service API, so the module keeps
-    // working on any machine with NetworkManager, bluez and swaync installed
-    // and needs no Quickshell version newer than the bar itself.
+    // working on any machine with NetworkManager and bluez installed and needs
+    // no Quickshell version newer than the bar itself.
     property bool wifiOn: false
     property bool bluetoothOn: false
-    property bool dndOn: false
     property bool caffeineOn: false
     property bool nightLightOn: false
     property bool gamemodeOn: false
-    property int notificationCount: 0
+
+    // Notifications come from the shell's own notification daemon, so these
+    // two are live rather than polled.
+    readonly property bool dndOn: NotificationService.dnd
+    readonly property int notificationCount: NotificationService.count
 
     // "" is the main page; "wifi", "bluetooth" and "appearance" replace it.
     property string page: ""
@@ -68,25 +82,23 @@ Item {
         command: ["bash", "-c",
             "w=$(nmcli radio wifi 2>/dev/null); " +
             "b=$(bluetoothctl show 2>/dev/null | grep -c 'Powered: yes'); " +
-            "d=$(swaync-client -D 2>/dev/null); " +
             "c=$(pgrep -x hypridle >/dev/null && echo 1 || echo 0); " +
             "n=$(pgrep -x hyprsunset >/dev/null && echo 1 || echo 0); " +
             "g=$([ -f \"$HOME/.config/ml4w/settings/gamemode-enabled\" ] && echo 1 || echo 0); " +
-            "echo \"${w:-disabled}|${b:-0}|${d:-false}|$c|$n|$g\""]
+            "echo \"${w:-disabled}|${b:-0}|$c|$n|$g\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 let parts = this.text.trim().split("|")
-                if (parts.length < 6)
+                if (parts.length < 5)
                     return
                 root.wifiOn = parts[0].trim() === "enabled"
                 root.bluetoothOn = parseInt(parts[1]) > 0
-                root.dndOn = parts[2].trim() === "true"
                 // hypridle running means the screen still blanks and locks, so
                 // caffeine is the inverse of it.
-                root.caffeineOn = parts[3].trim() !== "1"
-                root.nightLightOn = parts[4].trim() === "1"
+                root.caffeineOn = parts[2].trim() !== "1"
+                root.nightLightOn = parts[3].trim() === "1"
                 // gamemode.sh drops this flag file while gamemode is on.
-                root.gamemodeOn = parts[5].trim() === "1"
+                root.gamemodeOn = parts[4].trim() === "1"
             }
         }
     }
@@ -160,25 +172,6 @@ Item {
         onTriggered: {
             root.pollState()
             root.pollAudio()
-        }
-    }
-
-    // Live notification count, from the same waybar subscription the bar's
-    // bell uses. It emits a JSON line on every add and close.
-    Process {
-        command: ["swaync-client", "-swb"]
-        running: true
-        stdout: SplitParser {
-            onRead: data => {
-                try {
-                    let obj = JSON.parse(data)
-                    root.notificationCount = parseInt(obj.text) || 0
-                    if (obj.alt !== undefined)
-                        root.dndOn = String(obj.alt).indexOf("dnd") >= 0
-                } catch (e) {
-                    // Ignore malformed lines.
-                }
-            }
         }
     }
 
@@ -654,7 +647,9 @@ Item {
                                     : "../shared/icons/bell.svg"
                 label: "Do Not Disturb"
                 on: root.dndOn
-                onActivated: root.run("swaync-client -d")
+                // Notifications still collect while this is on; what stops is
+                // the bar's dot pulsing for them.
+                onActivated: NotificationService.toggleDnd()
             }
             Tile {
                 iconSrc: "../shared/icons/caffeine.svg"
@@ -685,6 +680,7 @@ Item {
         // --- NOTIFICATIONS ---
         // Next to Do Not Disturb, which decides whether this count grows.
         RowLayout {
+            id: notificationsRow
             Layout.fillWidth: true
             spacing: 8
 
@@ -712,17 +708,14 @@ Item {
             PillButton {
                 text: "Clear all"
                 enabled: root.notificationCount > 0
-                onActivated: root.run("swaync-client -C")
+                onActivated: NotificationService.clearAll()
             }
 
-            // swaync owns the notification list and does not expose it over
-            // D-Bus, so the list itself stays in its own panel; this opens it.
+            // The list drops out beside this panel, which stays open: the
+            // toggles and the levels are still there to the left of it.
             PillButton {
                 text: "Open"
-                onActivated: {
-                    Quickshell.execDetached(["swaync-client", "-t", "-sw"])
-                    root.closeRequested()
-                }
+                onActivated: root.notificationsRequested()
             }
         }
 

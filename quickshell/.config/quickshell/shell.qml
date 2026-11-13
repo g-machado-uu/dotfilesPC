@@ -8,11 +8,19 @@ import "DesktopWidget"
 import "CustomTheme"
 import "overview/modules/overview" as OverviewModule
 import "overview/services" as OverviewState
+import "NotificationApp"
 
 ShellRoot {
     id: shell
 
     // Test IPC tools: qs ipc show
+
+    // --- NOTIFICATIONS ---
+    // The shell's notification daemon (it replaced swaync). Named here so it
+    // is created with the shell itself: it is a singleton, so it would
+    // otherwise only come up when something first read it — which is a bar
+    // module, and the daemon should not depend on the bar's module list.
+    readonly property var notifications: NotificationService
 
     IpcHandler {
         target: "theme-manager"

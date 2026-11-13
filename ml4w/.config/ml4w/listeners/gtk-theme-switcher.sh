@@ -58,8 +58,6 @@ apply_theme() {
 
 
         $HOME/.config/hypr/scripts/gtk.sh &
-
-        swaync-client -rs
     elif [[ "$THEME_PREF" == "0" || "$THEME_PREF" == "false" ]]; then
         echo "Detected light theme preference (gtk-application-prefer-dark-theme=0/false). Applying light matugen theme..."
         $MATUGEN_BIN image $(cat ~/.cache/ml4w/hyprland-dotfiles/current_wallpaper) --source-color-index 0 -m "light"
@@ -71,8 +69,6 @@ apply_theme() {
 
 
         $HOME/.config/hypr/scripts/gtk.sh &
-
-        swaync-client -rs
     else
         echo "Warning: Unexpected value for gtk-application-prefer-dark-theme: $THEME_PREF. Expected 0/1/true/false. Skipping theme application."
     fi

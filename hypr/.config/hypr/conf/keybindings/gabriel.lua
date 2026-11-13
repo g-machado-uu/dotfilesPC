@@ -188,7 +188,7 @@ hl.bind(
 )
 hl.bind(
 	mainMod .. " + ALT + A",
-	hl.dsp.exec_cmd("~/.config/hypr/scripts/text-extractor.sh"),
+	hl.dsp.exec_cmd("qs ipc call ocr toggle"),
 	{ description = "Extract text from an area" }
 )
 hl.bind(mainMod .. " + CTRL + P", hl.dsp.exec_cmd("qs ipc call power toggle"), { description = "Start Power Menu" })
@@ -214,7 +214,7 @@ hl.bind(
 )
 hl.bind(
 	mainMod .. " + CTRL + K",
-	hl.dsp.exec_cmd("~/.config/hypr/scripts/keybindings.sh"),
+	hl.dsp.exec_cmd("qs ipc call keybinds toggle"),
 	{ description = "Show keybindings" }
 )
 hl.bind(
@@ -234,7 +234,7 @@ hl.bind(
 )
 hl.bind(
 	mainMod .. " + V",
-	hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-cliphist"),
+	hl.dsp.exec_cmd("qs ipc call clipboard toggle"),
 	{ description = "Open clipboard manager" }
 )
 hl.bind(

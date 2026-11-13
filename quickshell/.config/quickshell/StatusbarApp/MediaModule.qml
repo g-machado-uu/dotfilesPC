@@ -5,10 +5,18 @@ import QtQuick.Layouts
 import qs.CustomTheme
 import qs.shared
 
-// Now playing, in the bar. Shows a play/pause glyph and the track title, and
-// folds out of the layout entirely when nothing is playing — the same
-// `collapsed` convention the updates and battery modules use, so the bar's
-// keyboard navigation rebuilds around it.
+// Now playing, in the bar. Shows a play/pause glyph and the track title.
+//
+// The slot is a fixed width and is always there, whether or not anything is
+// playing: the title is elided into a constant text box and the whole module
+// keeps its width when the last player goes away, so neither a track change
+// nor a player appearing or disappearing ever resizes the bar. With no player
+// it holds a dimmed music glyph rather than an empty gap.
+//
+// It still reports `collapsed` while there is no player, which is what keeps it
+// out of the bar's keyboard navigation (an empty media panel is not worth a
+// stop) — unlike the updates and battery modules, that flag no longer takes it
+// out of the layout.
 Rectangle {
     id: media
 
@@ -23,6 +31,11 @@ Rectangle {
         return list.length > 0 ? list[0] : null
     }
 
+    // Width of the title box. The module's own width is built from it, so the
+    // two can never drift apart.
+    property real titleWidth: 150
+    // Skipped by the bar's keyboard navigation while nothing is playing. It
+    // keeps its place in the layout regardless; see the note above.
     readonly property bool collapsed: media.player === null
     // Set by the keyboard navigation in StatusbarWindow.
     property bool focused: false
@@ -39,11 +52,12 @@ Rectangle {
     function activate(): void { media.clicked() }
 
     // The bar opens the media panel after the pointer rests here for a moment.
-    readonly property bool hovered: mouseArea.containsMouse
-    readonly property bool active: mouseArea.containsMouse || media.focused
+    // Only ever true with a player: there is nothing to show without one.
+    readonly property bool hovered: mouseArea.containsMouse && !media.collapsed
+    readonly property bool active: media.hovered || (media.focused && !media.collapsed)
 
-    visible: !collapsed
-    implicitWidth: collapsed ? 0 : row.implicitWidth + 20
+    // A constant width: glyph, gap, title box, and the padding either side.
+    implicitWidth: 13 + row.spacing + media.titleWidth + 20
     implicitHeight: 30
     radius: 15
 
@@ -59,30 +73,43 @@ Rectangle {
 
         IconGlyph {
             Layout.alignment: Qt.AlignVCenter
-            source: (media.player && media.player.isPlaying)
-                ? "../shared/icons/play.svg"
-                : "../shared/icons/pause.svg"
+            source: media.collapsed
+                ? "../shared/icons/music.svg"
+                : ((media.player && media.player.isPlaying)
+                    ? "../shared/icons/play.svg"
+                    : "../shared/icons/pause.svg")
             size: 13
             color: media.active ? Theme.background : Theme.primary
+            // Dimmed while the slot is only holding its place.
+            opacity: media.collapsed ? 0.35 : 1
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.OutQuint }
+            }
         }
 
         Text {
             Layout.alignment: Qt.AlignVCenter
             // A fixed slot: long titles are cut and short ones leave room, so
             // a track change never resizes the bar.
-            Layout.preferredWidth: 150
-            Layout.maximumWidth: 150
+            Layout.preferredWidth: media.titleWidth
+            Layout.maximumWidth: media.titleWidth
             text: media.title
             elide: Text.ElideRight
             color: media.active ? Theme.background : Theme.primary
             font.family: Theme.fontFamily
             font.pixelSize: 12
+            opacity: media.collapsed ? 0 : 1
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.OutQuint }
+            }
         }
     }
 
     MouseArea {
         id: mouseArea
         anchors.fill: parent
+        // Nothing to click or scroll through without a player.
+        enabled: !media.collapsed
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: media.clicked()

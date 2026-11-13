@@ -314,15 +314,7 @@ Item {
                         } 
                     }
                     
-                    ML4WMenuItem { 
-                        text: "Wallpaper Effects"
-                        onClicked: {
-                            root.close()
-                            Quickshell.execDetached(["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-wallpaper-effects"])
-                        } 
-                    }
-
-                    ML4WMenuItem { 
+                    ML4WMenuItem {
                         text: "Clear Wallpaper Cache"
                         onClicked: {
                             root.close()

@@ -18,6 +18,9 @@ import qs.SettingsApp
 import qs.SoundApp
 import qs.SystemApp
 import qs.LauncherApp
+import qs.KeybindsApp
+import qs.NotificationApp
+import qs.OcrApp
 
 PanelWindow {
     id: root
@@ -59,7 +62,7 @@ PanelWindow {
     readonly property var defaultSettings: ({
         "bar":    { "height": 36, "reservedHeight": 36, "enabled": true, "alwaysExpanded": false },
         "pill":   { "collapsedWidth": 0, "expandedWidth": 680, "radius": 18, "flareRadius": 18, "animationDuration": 350 },
-        "modules":{ "left": ["terminal", "workspaces"],
+        "modules":{ "left": ["terminal", "workspaces", "media"],
                     "center": ["launcher", "clock", "calendar", "controlcentre"],
                     "right": ["updates", "battery", "powerprofile", "volume", "systemtray", "keyboard", "clipboard", "power"] },
         "border": { "width": 0, "colorTop": "", "colorBottom": "" },
@@ -76,7 +79,12 @@ PanelWindow {
         // showDelay: ms a workspace must stay empty before the widget comes
         // out, so apps that blink their window while loading don't bounce it.
         "weather": { "location": "Belfast, UK", "desktopWidget": true,
-                     "widgetScale": 0.8, "showDelay": 600 }
+                     "widgetScale": 0.8, "showDelay": 600 },
+        // spawnDuration: how long the notification card takes to grow out of
+        // the control centre, and to be sucked back in, in milliseconds.
+        // Deliberately not called animationDuration: the persist helpers match
+        // a key by name across the whole document, and the pill already has one.
+        "notifications": { "spawnDuration": 320 }
     })
 
     property var settings: defaultSettings
@@ -389,7 +397,6 @@ PanelWindow {
             onToggleRequested: root.togglePanel("calendar")
         }
     }
-    Component { id: cSwaync;     SwayncModule {} }
     // The clock's opposite number: it unfolds into the gap the clock leaves
     // while the desktop widget has the time, so the calendar is still one
     // click away from the middle of the bar.
@@ -443,10 +450,13 @@ PanelWindow {
         }
     }
 
-    // Anything else taking over the panel slot ends hover mode.
+    // Anything else taking over the panel slot ends hover mode, and takes the
+    // notification list with it: the list belongs to the control centre.
     onOpenPanelChanged: {
         if (root.openPanel !== "media")
             root.mediaHoverOpen = false
+        if (root.openPanel !== "controlcentre")
+            root.notificationsOpen = false
     }
 
     Timer {
@@ -545,7 +555,6 @@ PanelWindow {
         "launcher":   cLauncher,
         "clock":      cClock,
         "calendar":   cCalendar,
-        "swaync":     cSwaync,
         "controlcentre": cControlCentre,
         // The control centre was called "notifications" when it was only a
         // notification list. Kept as an alias so an existing statusbar.json
@@ -570,6 +579,30 @@ PanelWindow {
     function togglePanel(name: string): void {
         root.openPanel = (root.openPanel === name) ? "" : name
     }
+
+    // --- THE CONTROL CENTRE AND ITS NOTIFICATION LIST ---
+    // The notification list is the one panel that is not in the single panel
+    // slot: it spawns sideways out of the control centre's right edge, from its
+    // "Open" button, and the control centre stays exactly where it is. So it
+    // has a flag of its own rather than a name in openPanel, and it only ever
+    // lives as long as the control centre does.
+    //
+    // It is a free-standing card (shared/SideCard.qml), not a panel hanging off
+    // the bar, so the bar neither widens for it nor has to cover it — which is
+    // also why opening it costs nothing: nothing moves and nothing resizes
+    // except the card's own width.
+    property bool notificationsOpen: false
+
+    // Where the card sits: pinned by its left edge *against* the control
+    // centre's right edge, with no gap, so the two read as one body.
+    readonly property real ccPanelWidth: 420
+    readonly property real notificationsPanelWidth: 380
+
+    // The row the card grows out of, in the control centre's coordinates. Read
+    // from the panel itself so it follows the layout rather than a number kept
+    // in two places; the fallback only matters before the panel exists.
+    readonly property real ccNotificationsRowY: controlCentrePanel.content
+        ? controlCentrePanel.content.notificationsRowY : 230
 
     // True while a panel is flush with the bar's right edge, so the bar can
     // merge its silhouette into it.
@@ -758,6 +791,27 @@ PanelWindow {
         function isOpen(): bool { return root.openPanel === "controlcentre" }
     }
 
+    // The notification list beside the control centre. It opens the pair, so
+    // the control centre comes out with it.
+    IpcHandler {
+        enabled: root.ipcEnabled
+        target: "notificationlist"
+        function toggle(): void {
+            if (root.notificationsOpen) {
+                root.notificationsOpen = false
+            } else {
+                root.openPanel = "controlcentre"
+                root.notificationsOpen = true
+            }
+        }
+        function open(): void {
+            root.openPanel = "controlcentre"
+            root.notificationsOpen = true
+        }
+        function close(): void { root.notificationsOpen = false }
+        function isOpen(): bool { return root.notificationsOpen }
+    }
+
     // The system panel. For now it opens with a right click on the power
     // profile icon; this is what a keybinding will call.
     IpcHandler {
@@ -805,6 +859,29 @@ PanelWindow {
         function open(): void { root.openPanel = "launcher" }
         function close(): void { root.closePanel("launcher") }
         function isOpen(): bool { return root.openPanel === "launcher" }
+    }
+
+    // The keybinding cheat sheet (SUPER + CTRL + K). It replaced
+    // scripts/keybindings.sh, which showed the same list in rofi.
+    IpcHandler {
+        enabled: root.ipcEnabled
+        target: "keybinds"
+        function toggle(): void { root.togglePanel("keybinds") }
+        function open(): void { root.openPanel = "keybinds" }
+        function close(): void { root.closePanel("keybinds") }
+        function isOpen(): bool { return root.openPanel === "keybinds" }
+    }
+
+    // The OCR language picker (SUPER + ALT + A). It replaced the rofi menu
+    // inside scripts/text-extractor.sh; picking a language in the panel is
+    // what starts the capture.
+    IpcHandler {
+        enabled: root.ipcEnabled
+        target: "ocr"
+        function toggle(): void { root.togglePanel("ocr") }
+        function open(): void { root.openPanel = "ocr" }
+        function close(): void { root.closePanel("ocr") }
+        function isOpen(): bool { return root.openPanel === "ocr" }
     }
 
     IpcHandler {
@@ -862,6 +939,18 @@ PanelWindow {
             if (name === "")
                 return
             root.applySettings(root.persistString("weather", "location", name))
+        }
+        // How long the notification card takes to grow out of the control
+        // centre and to be sucked back in, in milliseconds.
+        function notificationSpawn(): string {
+            return String(root.settings.notifications.spawnDuration)
+        }
+        function setNotificationSpawn(ms: string): void {
+            let v = parseInt(ms)
+            if (isNaN(v))
+                return
+            v = Math.max(0, Math.min(2000, v))
+            root.applySettings(root.persistNumber("notifications", "spawnDuration", v))
         }
         // Size of the desktop widget, 1.0 being the original size.
         function weatherWidgetScale(): string { return String(root.settings.weather.widgetScale) }
@@ -1153,6 +1242,28 @@ PanelWindow {
                 : 0
         }
 
+        // --- WHERE THE NOTIFICATION CARD SPAWNS FROM ---
+        // An invisible item whose *right edge* is where the notification card
+        // begins: the control centre's right edge plus the gap. The card is
+        // pinned to that edge and grows rightwards (SideCard's default edges),
+        // so this is only ever read, never animated — the card's own width is
+        // the whole animation, and the surface underneath never moves.
+        //
+        // Pinned at x = 0 and sized by width rather than placed by x, because
+        // width is the half of an anchor that a mapped popup actually follows:
+        // BarPanel and SideCard bind anchor.rect.width, but nothing re-reads an
+        // anchor's position. It is as tall as the bar so the card starts from
+        // the bar's underside, and draws nothing itself.
+        Item {
+            id: notificationsAnchor
+            x: 0
+            y: 0
+            height: pill.height
+            // The control centre is centred on the bar, so its right edge is
+            // half the bar plus half the panel along.
+            width: pill.width / 2 + root.ccPanelWidth / 2
+        }
+
         BarDropdown {
             id: calendarPanel
             // Hangs off whichever of the two centre modules is currently out:
@@ -1212,14 +1323,19 @@ PanelWindow {
         BarDropdown {
             id: controlCentrePanel
             // Dropped from the middle of the bar, like the other wide panels.
+            // It stays there while the notification card is out: the card
+            // spawns beside it rather than pushing it over.
             anchorItem: pill
             open: root.openPanel === "controlcentre"
             onDismissed: root.closePanel("controlcentre")
-            panelWidth: 420
+            panelWidth: root.ccPanelWidth
             // Everything on one page, no scrolling: as tall as the content says
             // it needs, capped for short screens.
             panelHeight: Math.min(content ? content.panelHeight : 748,
                                   root.screen.height - root.barHeight - 72)
+            // This panel holds the focus grab for the pair, so a click in the
+            // card beside it is not a click outside. The card takes no grab.
+            grabAlso: root.notificationsOpen ? [notificationsCard.grabWindow] : []
             panelContent: Component {
                 ControlCentrePanel {
                     isOpen: root.openPanel === "controlcentre"
@@ -1227,6 +1343,47 @@ PanelWindow {
                     weatherWidgetEnabled: root.weatherWidgetEnabled
                     onCloseRequested: root.closePanel("controlcentre")
                     onSoundRequested: root.openPanel = "sound"
+                    onNotificationsRequested:
+                        root.notificationsOpen = !root.notificationsOpen
+                }
+            }
+        }
+
+        // The notification list. It spawns out of the control centre's right
+        // edge and is sucked back into it on closing, so the toggles and the
+        // levels never move and stay reachable to the left of it.
+        SideCard {
+            id: notificationsCard
+            anchorItem: notificationsAnchor
+            open: root.notificationsOpen
+            onDismissed: root.notificationsOpen = false
+            // The control centre's grab covers this card; a second grab here
+            // would fight it for the pointer.
+            grabFocus: false
+            cardWidth: root.notificationsPanelWidth
+            // Top level with the NOTIFICATIONS row it comes out of, bottom
+            // stopping short of the control centre's rounded bottom corner so
+            // the two straight edges meet along the card's whole height.
+            topInset: root.ccNotificationsRowY
+            cardHeight: controlCentrePanel.panelHeight
+                - root.ccNotificationsRowY - pill.bottomRadius
+            // Starts as a nub the height of that row.
+            minHeight: 34
+            cornerRadius: pill.bottomRadius
+            // Stands clear of the control centre, joined to it only by the
+            // stem at its top left, which flares into the control centre's edge
+            // the way the bar flares into the top of the screen — and into the
+            // card's own edge at the rule under its header, so the joint has no
+            // square corner at either end.
+            attachGap: 18
+            attachCardY: notificationsCard.content
+                ? notificationsCard.content.dividerY : 52
+            backgroundOpacity: root.settings.opacity.expanded
+            revealDuration: root.settings.notifications.spawnDuration
+            cardContent: Component {
+                NotificationPanel {
+                    isOpen: root.notificationsOpen
+                    onCloseRequested: root.notificationsOpen = false
                 }
             }
         }
@@ -1322,6 +1479,41 @@ PanelWindow {
                 LauncherPanel {
                     isOpen: root.openPanel === "launcher"
                     onCloseRequested: root.closePanel("launcher")
+                }
+            }
+        }
+
+        BarDropdown {
+            id: keybindsPanel
+            // A wide panel with no icon of its own, so it drops from the
+            // middle of the bar like the control centre.
+            anchorItem: pill
+            open: root.openPanel === "keybinds"
+            onDismissed: root.closePanel("keybinds")
+            panelWidth: 560
+            panelHeight: Math.min(560, root.screen.height - root.barHeight - 72)
+            panelContent: Component {
+                KeybindsPanel {
+                    isOpen: root.openPanel === "keybinds"
+                    onCloseRequested: root.closePanel("keybinds")
+                }
+            }
+        }
+
+        BarDropdown {
+            id: ocrPanel
+            // Opened by a keybinding only, so it drops from the middle of the
+            // bar. Short: as tall as the list of installed languages.
+            anchorItem: pill
+            open: root.openPanel === "ocr"
+            onDismissed: root.closePanel("ocr")
+            panelWidth: 300
+            panelHeight: Math.min(content ? content.panelHeight : 200,
+                                  root.screen.height - root.barHeight - 72)
+            panelContent: Component {
+                OcrPanel {
+                    isOpen: root.openPanel === "ocr"
+                    onCloseRequested: root.closePanel("ocr")
                 }
             }
         }

@@ -1,11 +1,47 @@
 #!/usr/bin/env bash
 # Script by https://github.com/anshifmonz
+#
+# Grabs an area of the screen, runs it through tesseract and puts the text on
+# the clipboard.
+#
+# The language used to be picked in a rofi menu here; the Quickshell OCR panel
+# (SUPER + ALT + A -> "qs ipc call ocr toggle") does that now and passes the
+# choice in with --lang. The language list itself still lives here, behind
+# --list-langs, so the panel and this script can never disagree about what is
+# installed.
+#
+#   text-extractor.sh                 capture with the default language
+#   text-extractor.sh --lang deu      capture with a given language
+#   text-extractor.sh --list-langs    print the installed languages and exit
 
 set -Eeuo pipefail
 
 PICKER_PID=""
 SLURP_TIMEOUT=10
+OCR_LANGUAGE=""
+LIST_ONLY=0
 DEPS=(grim slurp magick tesseract wl-copy timeout)
+
+while (($#)); do
+    case "$1" in
+        --lang)
+            OCR_LANGUAGE="${2:-}"
+            shift 2
+            ;;
+        --lang=*)
+            OCR_LANGUAGE="${1#--lang=}"
+            shift
+            ;;
+        --list-langs)
+            LIST_ONLY=1
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
 
 die() { echo "Error: $*" >&2; exit 1; }
 safe_kill() { [[ -n "${1:-}" ]] && kill "$1" 2>/dev/null || true; }
@@ -32,7 +68,8 @@ _checkCommandExists() {
     return
 }
 
-check_deps
+# The language list is wanted on its own (by the OCR panel), so it is read
+# before the capture dependencies are checked.
 
 # Arch
 if [[ $(_checkCommandExists "pacman") == 0 ]]; then
@@ -45,18 +82,24 @@ else
     OCR_LANGUAGE_LIST="$(zypper se -i | grep -iE "tesseract-(ocr|data|langpack)*-" | awk -F '-' '{print $NF}')"
 fi
 
-argc() { echo $#; }
-rofi_cmd() {
-    rofi -dmenu -replace -config ~/.config/rofi/config-ocr-lang.rasi -i -no-show-icons -l 3 -width 30 -p "Select the OCR language"
-}
+# tesseract ships "osd" (orientation and script detection) as a data file, not
+# a language: it is never something to recognise text with.
+OCR_LANGUAGE_LIST="$(echo "$OCR_LANGUAGE_LIST" | grep -vx "osd" || true)"
 
-if [ "$(argc $OCR_LANGUAGE_LIST)" -gt 1 ]; then
-    OCR_LANGUAGE=$(echo -e "$OCR_LANGUAGE_LIST" | rofi_cmd)
-    sleep 0.5 || true
+if ((LIST_ONLY)); then
+    echo "$OCR_LANGUAGE_LIST"
+    exit 0
 fi
 
-if [ -z "$OCR_LANGUAGE" ]; then
-    OCR_LANGUAGE="eng"
+check_deps
+
+# Fall back to the only installed language, or to English.
+if [[ -z "$OCR_LANGUAGE" ]]; then
+    if [[ "$(echo "$OCR_LANGUAGE_LIST" | grep -c .)" == "1" ]]; then
+        OCR_LANGUAGE="$(echo "$OCR_LANGUAGE_LIST" | tr -d '[:space:]')"
+    else
+        OCR_LANGUAGE="eng"
+    fi
 fi
 
 hyprpicker -r -z &
