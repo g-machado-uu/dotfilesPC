@@ -11,6 +11,11 @@ Rectangle {
     // currently selected module.
     property bool focused: false
     signal clicked()
+    // A second action on the same icon, for a module that has one (the control
+    // centre's right click opens the notification list on its own). A module
+    // that leaves it unconnected is unaffected: a right click on it does
+    // nothing, as before.
+    signal rightClicked()
 
     // Run the button's action (mouse click or keyboard Return).
     function activate(): void { btn.clicked() }
@@ -57,6 +62,12 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: btn.clicked()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: mouse => {
+            if (mouse.button === Qt.RightButton)
+                btn.rightClicked()
+            else
+                btn.clicked()
+        }
     }
 }

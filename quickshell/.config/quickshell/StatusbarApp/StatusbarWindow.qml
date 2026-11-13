@@ -49,7 +49,7 @@ PanelWindow {
     // --- USER SETTINGS ---
     // One of two files is the "master" that feeds the settings object below:
     //
-    //   1. ~/.config/ml4w-statusbar/statusbar.json — the user override. When this
+    //   1. ~/.config/quickshell/StatusbarApp/statusbar.json — the user override. When this
     //      file EXISTS it is the master: every value is read from it and the
     //      IPC setters write their changes (enabled, alwaysExpanded, weather)
     //      back into it. The shipped file is ignored while it exists.
@@ -61,10 +61,10 @@ PanelWindow {
     // or entirely missing file still leaves every value defined.
     readonly property var defaultSettings: ({
         "bar":    { "height": 36, "reservedHeight": 36, "enabled": true, "alwaysExpanded": false },
-        "pill":   { "collapsedWidth": 0, "expandedWidth": 680, "radius": 18, "flareRadius": 18, "animationDuration": 350 },
-        "modules":{ "left": ["terminal", "workspaces", "media"],
-                    "center": ["launcher", "clock", "calendar", "controlcentre"],
-                    "right": ["updates", "battery", "powerprofile", "volume", "systemtray", "keyboard", "clipboard", "power"] },
+        "pill":   { "collapsedWidth": 0, "expandedWidth": 600, "radius": 18, "flareRadius": 18, "animationDuration": 350 },
+        "modules":{ "left": ["terminal", "workspaces", "media", "notificationticker"],
+                    "center": ["launcher", "clock", "calendar", "controlcentre","updates"],
+                    "right": ["battery", "powerprofile", "volume", "systemtray", "keyboard", "clipboard", "power"] },
         "border": { "width": 0, "colorTop": "", "colorBottom": "" },
         "opacity":{ "collapsed": 0.82, "expanded": 0.9 },
         "clock":  { "format": "HH:mm", "dateFormat": "ddd, dd MMM" },
@@ -84,7 +84,10 @@ PanelWindow {
         // the control centre, and to be sucked back in, in milliseconds.
         // Deliberately not called animationDuration: the persist helpers match
         // a key by name across the whole document, and the pill already has one.
-        "notifications": { "spawnDuration": 320 }
+        "notifications": { "spawnDuration": 320, "tickerWidth": 150 },
+        // The two wide slots in the left group. They are what the bar's width
+        // is actually made of: see the note on pill.expandedWidth.
+        "media":  { "titleWidth": 90 }
     })
 
     property var settings: defaultSettings
@@ -103,7 +106,7 @@ PanelWindow {
         // IPC), so the others follow the change from disk.
         watchChanges: true
         onFileChanged: reload()
-        path: Quickshell.env("HOME") + "/.config/ml4w-statusbar/statusbar.json"
+        path: Quickshell.env("HOME") + "/.config/quickshell/StatusbarApp/statusbar.json"
         blockLoading: true
         printErrors: false
         onLoaded: { root.overrideExists = true; root.applySettings() }
@@ -413,6 +416,7 @@ PanelWindow {
     Component {
         id: cMedia
         MediaModule {
+            titleWidth: root.settings.media.titleWidth
             // Rebuild the keyboard navigation list when a player appears or
             // goes away (the module folds out of the layout with it).
             onCollapsedChanged: Qt.callLater(root.rebuildNavItems)
@@ -482,6 +486,12 @@ PanelWindow {
         id: cControlCentre
         ControlCentreModule {
             onClicked: root.togglePanel("controlcentre")
+            // Right click goes straight to the notifications, without the
+            // control centre: the same list, dropped from the bar on its own.
+            // Unaffected by Do Not Disturb — the list is where the collected
+            // notifications are, which is exactly what is wanted while the
+            // alert is off.
+            onRightClicked: root.togglePanel("notifications")
         }
     }
     // True while a system-tray context menu is open. Kept at window scope so
@@ -501,6 +511,15 @@ PanelWindow {
                 property: "trayMenuOpen"
                 value: menuOpen
             }
+        }
+    }
+    Component {
+        id: cNotificationTicker
+        NotificationTickerModule {
+            available: root.settings.notifications.tickerWidth
+            // A notification that is not about a file asks for the list; one
+            // that is opens that file's folder itself.
+            onOpenRequested: root.togglePanel("notifications")
         }
     }
     Component { id: cKeyboard;   KeyboardLayoutModule {} }
@@ -558,9 +577,15 @@ PanelWindow {
         "controlcentre": cControlCentre,
         // The control centre was called "notifications" when it was only a
         // notification list. Kept as an alias so an existing statusbar.json
-        // keeps working.
+        // keeps working. (The panel of that name is the notification list that
+        // drops from the middle of the bar; this is the module list, which is
+        // a different namespace.)
         "notifications": cControlCentre,
         "media":         cMedia,
+        // The newest waiting notification, beside the media slot. Its slot is
+        // reserved exactly as the media slot is: see the module.
+        "notificationticker": cNotificationTicker,
+        "ticker":             cNotificationTicker,
         "systemtray": cSystemTray,
         "keyboard":   cKeyboard,
         "clipboard":  cClipboard,
@@ -612,6 +637,15 @@ PanelWindow {
         if (root.openPanel === name)
             root.openPanel = ""
     }
+
+    // How far the clock's rule sits off the centre group's own centre, which
+    // is the centre of the screen. The group pads its left end by this, which
+    // slides the rule back onto the centre line and leaves the slack outside
+    // the group's first module instead of inside the clock in front of the
+    // time. See the note in ClockModule.
+    readonly property real clockInkSlack:
+        root.moduleRefs["clock"] && root.moduleRefs["clock"].inkSlack !== undefined
+            ? root.moduleRefs["clock"].inkSlack : 0
 
     // The loaded module instances by name, so a panel can hang off the icon
     // that owns it. Rebuilt alongside navItems, and replaced wholesale so the
@@ -779,16 +813,17 @@ PanelWindow {
         function isOpen(): bool { return root.openPanel === "controlcentre" }
     }
 
-    // The control centre answered to "notifications" while it was only a
-    // notification list. Kept so existing keybindings and scripts still reach
-    // it under the old name.
+    // The notification list on its own, dropping from the middle of the bar
+    // with no control centre behind it. This target used to be an alias for the
+    // control centre, from when the control centre was the only way to reach
+    // the notifications; nothing called it, and the name belongs to the list.
     IpcHandler {
         enabled: root.ipcEnabled
         target: "notifications"
-        function toggle(): void { root.togglePanel("controlcentre") }
-        function open(): void { root.openPanel = "controlcentre" }
-        function close(): void { root.closePanel("controlcentre") }
-        function isOpen(): bool { return root.openPanel === "controlcentre" }
+        function toggle(): void { root.togglePanel("notifications") }
+        function open(): void { root.openPanel = "notifications" }
+        function close(): void { root.closePanel("notifications") }
+        function isOpen(): bool { return root.openPanel === "notifications" }
     }
 
     // The notification list beside the control centre. It opens the pair, so
@@ -1022,8 +1057,20 @@ PanelWindow {
         property real contentWidth: centerArea.implicitWidth
             + 2 * Math.max(leftArea.implicitWidth, rightArea.implicitWidth)
             + 50
-        // expandedWidth from the settings file is treated as a minimum: the
-        // pill grows past it when the content needs more room.
+        // expandedWidth from the settings file is treated as a MINIMUM, not a
+        // width: the pill grows past it whenever the content needs more room,
+        // which on a full bar it always does. Setting it smaller therefore does
+        // nothing at all, and setting it larger only pads a bar that is not yet
+        // full. The width of a full bar is the width of its modules, and the
+        // two that are adjustable are `media.titleWidth` and
+        // `notifications.tickerWidth`.
+        //
+        // The bar is symmetric because the centre group has to sit on the
+        // centre of the screen, so each half reserves the *wider* of the two
+        // end groups. Whichever group is narrower therefore floats to its end
+        // of the bar with the difference left as empty bar beside the centre
+        // group. Trimming the two left-hand slots until the left group matches
+        // the right is what closes that gap — nothing else in the bar can.
         property real expandedWidth: Math.max(
             root.settings.pill.expandedWidth, contentWidth)
 
@@ -1123,12 +1170,20 @@ PanelWindow {
         // ==========================================
         // LEFT AREA (only visible when expanded)
         // ==========================================
+        // The gap between the left modules is carried as a margin on each
+        // module rather than as the layout's spacing, so a module can ask for
+        // less of it. The round icon buttons want the full gap between their
+        // hover circles; the media and notification slots are wide pills whose
+        // ink starts 10px inside their own edge, so the full gap on top of that
+        // reads as half again as much space as the buttons have between them.
+        // They ask for `gapBefore: 0` and sit against their neighbour's gap
+        // alone.
         RowLayout {
             id: leftArea
             anchors.left: parent.left
             anchors.leftMargin: pill.edgeMargin
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 14
+            spacing: 0
 
             opacity: pill.expanded ? 1 : 0
             visible: opacity > 0
@@ -1142,7 +1197,16 @@ PanelWindow {
                 id: leftRepeater
                 model: root.settings.modules.left
                 Loader {
+                    id: leftSlot
                     Layout.alignment: Qt.AlignVCenter
+                    // Half the gap on each side, as in the centre group. A
+                    // module may ask for less in front of it (gapBefore).
+                    readonly property real gapBefore:
+                        (item && item.gapBefore !== undefined) ? item.gapBefore : 7
+                    // The first module sits on the bar's own edge margin,
+                    // with no gap in front of it.
+                    Layout.leftMargin: index === 0 ? 0 : leftSlot.gapBefore
+                    Layout.rightMargin: 7
                     sourceComponent: root.moduleComponents[modelData] || null
                     onLoaded: Qt.callLater(root.rebuildNavItems)
                 }
@@ -1162,6 +1226,13 @@ PanelWindow {
             anchors.centerIn: parent
             spacing: 0
 
+            // The slack, at whichever end of the group needs it. Invisible: it
+            // is bar, with the left group's last module somewhere to its left.
+            Item {
+                Layout.preferredWidth: Math.max(0, root.clockInkSlack)
+                Layout.preferredHeight: 1
+            }
+
             Repeater {
                 id: centerRepeater
                 model: root.settings.modules.center
@@ -1177,6 +1248,11 @@ PanelWindow {
                     sourceComponent: root.moduleComponents[modelData] || null
                     onLoaded: Qt.callLater(root.rebuildNavItems)
                 }
+            }
+
+            Item {
+                Layout.preferredWidth: Math.max(0, -root.clockInkSlack)
+                Layout.preferredHeight: 1
             }
         }
 
@@ -1496,6 +1572,33 @@ PanelWindow {
                 KeybindsPanel {
                     isOpen: root.openPanel === "keybinds"
                     onCloseRequested: root.closePanel("keybinds")
+                }
+            }
+        }
+
+        // The notification list on its own, with no control centre behind it:
+        // the same content as the card that grows out of the control centre,
+        // hosted by a plain bar dropdown instead. Reached by a right click on
+        // the control centre icon, by SUPER + CTRL + N and over IPC.
+        //
+        // Only one of the two is ever up, because this one is an openPanel name
+        // and the card is cleared whenever openPanel leaves "controlcentre".
+        BarDropdown {
+            id: notificationsPanel
+            // Opened by a keybinding and by right-clicking an icon that is in
+            // the centre group, so it drops from the middle of the bar like the
+            // wallpaper and OCR panels rather than from that icon: the list is
+            // not a menu belonging to the control centre's button.
+            anchorItem: pill
+            open: root.openPanel === "notifications"
+            onDismissed: root.closePanel("notifications")
+            panelWidth: root.notificationsPanelWidth
+            panelHeight: Math.min(520,
+                root.screen.height - root.barHeight - 72)
+            panelContent: Component {
+                NotificationPanel {
+                    isOpen: root.openPanel === "notifications"
+                    onCloseRequested: root.closePanel("notifications")
                 }
             }
         }

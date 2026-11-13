@@ -75,6 +75,7 @@ hl.bind(mainMod .. " + CTRL + W", hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-w
 hl.bind(mainMod .. " + ALT + W", hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-wallpaper-automation"), { description = "Start random wallpaper script" })
 hl.bind(mainMod .. " + CTRL + RETURN", hl.dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"), { description = "Open application launcher" })
 hl.bind(mainMod .. " + CTRL + K", hl.dsp.exec_cmd("qs ipc call keybinds toggle"), { description = "Show keybindings" })
+hl.bind(mainMod .. " + CTRL + N", hl.dsp.exec_cmd("qs ipc call notifications toggle"), { description = "Show the notifications" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-reload-statusbar"), { description = "Reload Status Bar" })
 hl.bind(mainMod .. " + CTRL + B", hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-toggle-statusbar"), { description = "Toggle Status Bar" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("~/.config/hypr/scripts/loadconfig.sh"), { description = "Reload hyprland config" })

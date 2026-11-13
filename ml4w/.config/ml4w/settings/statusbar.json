@@ -1,38 +1,61 @@
+/*
+Default configuration file for the Quickshell Statusbar.
+*/
 {
-    "bar": {
-        "enabled": true,
-        "alwaysExpanded": true
-    },
-    "modules": {
-        "left": [
-            "workspaces",
-            "terminal",
-            "media"
-        ],
-        "center": [
-            "launcher",
-            "clock",
-            "calendar",
-            "controlcentre"
-        ],
-        "right": [
-            "updates",
-            "battery",
-            "powerprofile",
-            "volume",
-            "systemtray",
-            "keyboard",
-            "clipboard",
-            "power"
-        ]
-    },
-    "weather": {
-        "location": "Greenisland",
-        "desktopWidget": true,
-        "widgetScale": 0.9,
-        "showDelay": 600
-    },
-    "notifications": {
-        "spawnDuration": 320
-    }
+  "bar": {
+    "height": 36,
+    "reservedHeight": 36,
+    "enabled": true,
+    "alwaysExpanded": true
+  },
+  "pill": {
+    "collapsedWidth": 0,
+    "expandedWidth": 500,
+    "radius": 18,
+    "flareRadius": 18,
+    "animationDuration": 350
+  },
+  "modules": {
+    "left": ["workspaces", "terminal", "media", "notificationticker"],
+    "center": ["launcher", "clock", "calendar", "controlcentre", "updates"],
+    "right": [
+      "battery",
+      "powerprofile",
+      "volume",
+      "systemtray",
+      "keyboard",
+      "clipboard",
+      "power"
+    ]
+  },
+  "border": {
+    "width": 0,
+    "colorTop": "",
+    "colorBottom": ""
+  },
+  "opacity": {
+    "collapsed": 0.82,
+    "expanded": 0.9
+  },
+  "clock": {
+    "format": "HH:mm",
+    "dateFormat": "ddd, dd MMM"
+  },
+  "workspaces": {
+    "count": 5,
+    "showAppIcons": true
+  },
+  "weather": {
+    "location": "Belfast, UK",
+    "desktopWidget": true,
+    "widgetScale": 0.8,
+    "showDelay": 600
+  },
+  "media": {
+      "titleWidth": 90
+  },
+  "notifications": {
+    "spawnDuration": 320,
+    "tickerWidth": 150
+  }
 }

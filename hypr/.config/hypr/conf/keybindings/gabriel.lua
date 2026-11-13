@@ -218,6 +218,11 @@ hl.bind(
 	{ description = "Show keybindings" }
 )
 hl.bind(
+	mainMod .. " + CTRL + N",
+	hl.dsp.exec_cmd("qs ipc call notifications toggle"),
+	{ description = "Show the notifications" }
+)
+hl.bind(
 	mainMod .. " + SHIFT + B",
 	hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-reload-statusbar"),
 	{ description = "Reload Status Bar" }

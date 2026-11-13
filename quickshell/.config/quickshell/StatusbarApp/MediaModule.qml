@@ -34,6 +34,12 @@ Rectangle {
     // Width of the title box. The module's own width is built from it, so the
     // two can never drift apart.
     property real titleWidth: 150
+
+    // No gap in front of this module: it is a wide pill whose ink starts 10px
+    // inside its own left edge, so the bar's usual 7px either side on top of
+    // that read as a hole between it and the terminal button. Read by the bar's
+    // left area.
+    readonly property real gapBefore: 0
     // Skipped by the bar's keyboard navigation while nothing is playing. It
     // keeps its place in the layout regardless; see the note above.
     readonly property bool collapsed: media.player === null

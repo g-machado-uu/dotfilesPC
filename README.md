@@ -21,23 +21,54 @@ the assistance of Claude (Anthropic).
 ## Screenshots
 
 All screenshots were taken on this PC. The modules of the status bar are
-defined in `~/.config/ml4w/settings/statusbar.json`, following the ML4W
-convention.
+defined in `~/.config/quickshell/StatusbarApp/statusbar.json`. Two files can
+feed the bar and only one of them is ever read: that one when it exists (it
+does), and `~/.config/ml4w/settings/statusbar.json` only if it were deleted.
+The copy in the repository *is* the live file, since `~/.config/quickshell` is
+the stow link, and the IPC setters write their changes back into it. Whichever
+of the two is the master is merged over the defaults built into
+`StatusbarWindow.qml`, so a key left out of the file still has a value; editing
+the file that is *not* the master changes nothing.
 
 ![Status bar](docs/img/statusbar.png)
 
-Two things in that layout are deliberate. **The clock is the centre of the
-screen:** the centre group is the launcher icon, the clock and the control
-centre icon, a 30px button either side of the clock, and while the date is out
-the clock gives the time and the date a cell each of the same width — so the
-hairline rule between them lands exactly on the centre of the screen rather
-than as far left of it as the date is wider than the time. **The media module
-is in the left group**, to the right of the terminal icon, and holds a fixed
-slot whether or not anything is playing: the title is elided into a constant
-box and the slot keeps its width when the last player goes away, so neither a
-track change nor a player appearing resizes the bar. In the centre group it
-pushed the clock off the middle of the screen; anywhere, at its natural width,
-it made the bar twitch.
+Three things in that layout are deliberate.
+
+**The clock is the centre of the screen.** The centre group is the launcher
+icon, the clock and the control centre icon, a 30px button either side of the
+clock, and the hairline rule between the time and the date lands exactly on the
+centre of the screen (measured: x = 1719 of 3440, which is where a 1px line
+centred on 1720 falls). The time and the date are each sized to their own text,
+so the rule sits as far left of the clock's own centre as the date is wider
+than the time; the clock reports that difference as `inkSlack` and the centre
+group pads its left end by it, which slides the rule back onto the centre line.
+The slack ends up outside the group, as bar, where there is nothing to see.
+
+An earlier version centred the rule by giving the time and the date a cell each
+of the same width. That also put the rule on the centre line, but it did it by
+leaving the difference as blank space *in front of the time*, which pushed the
+launcher icon a date's-worth further from the clock than the control centre is
+on the other side. The space is the same either way; outside the group it is
+invisible and the group reads as symmetric. Measured ink to ink: 23px from the
+launcher to the time, 24px from the date to the control centre.
+
+**The media module is in the left group**, against the terminal icon, and holds
+a fixed slot whether or not anything is playing: the title is elided into a
+constant box and the slot keeps its width when the last player goes away, so
+neither a track change nor a player appearing resizes the bar. In the centre
+group it pushed the clock off the middle of the screen; anywhere, at its
+natural width, it made the bar twitch.
+
+The left group carries its gaps as margins on each module rather than as the
+layout's spacing, so a module can ask for less. The round icon buttons want the
+full gap between their hover circles; the media and notification slots are wide
+pills whose ink starts 10px inside their own edge, so the full gap on top of
+that read as a hole. They set `gapBefore: 0` and sit against their neighbour's
+half of the gap alone — 7px between the terminal's hover circle and the media
+pill, where it used to be 14.
+
+**The newest notification is read out beside the media slot** — see
+[Notifications](#notifications).
 
 The control centre (`SUPER + CTRL + S`) contains network and Bluetooth tiles,
 Do Not Disturb, Caffeine, Night Light, Gamemode, audio and brightness sliders,
@@ -102,7 +133,7 @@ directory. For example, `hypr/.config/hypr` is linked to `~/.config/hypr`.
 * **Input:** the keyboard layout is set in `hypr/.config/hypr/input.lua`.
 * **Wallpaper folder:** `~/Pictures/Wallpapers`
   (`ml4w/.config/ml4w/settings/wallpaper-folder`).
-* **Weather location:** stored in `ml4w/.config/ml4w/settings/statusbar.json`.
+* **Weather location:** stored in `quickshell/.config/quickshell/StatusbarApp/statusbar.json`.
 
 ## Installation
 
@@ -326,6 +357,8 @@ source is `hypr/.config/hypr/conf/keybindings/gabriel.lua`.
 | `SUPER + TAB` | Workspace overview |
 | `SUPER + SPACE` | Expand the bar and give it keyboard focus |
 | `SUPER + CTRL + S` | Control centre |
+| `SUPER + CTRL + N` | Notifications |
+| `SUPER + CTRL + K` | Keybindings panel |
 | `SUPER + SHIFT + S` | Settings panel |
 | `SUPER + CTRL + W` | Wallpaper picker |
 | `SUPER + V` | Clipboard history |
@@ -457,6 +490,21 @@ arriving swells the dot under the control centre icon three times and then
 leaves it there, which is the whole of the alert. The notifications themselves
 wait in the control centre.
 
+There are three ways to the list, and it is the same list each time:
+
+* the control centre's Notifications row, whose `Open` button grows it sideways
+  out of the control centre's right edge (below);
+* `SUPER + CTRL + N`, a **right click on the control centre icon**, or
+  `qs ipc call notifications toggle`, which drop it out of the middle of the
+  bar on its own, as a plain bar panel like the wallpaper and OCR panels. Right
+  click works while Do Not Disturb is on, which is when going to the list
+  deliberately is the only way anything reaches you;
+* a click on the notification ticker in the bar (below).
+
+Only one of the two ever stands: the standalone panel is an `openPanel` name
+like any other, and the attached card is cleared whenever `openPanel` leaves
+`controlcentre`.
+
 The control centre's Notifications row shows the count and has two buttons.
 `Clear all` dismisses everything; `Open` grows the list sideways out of the
 control centre's right edge, and closing it sucks the card back in. The
@@ -520,6 +568,72 @@ not even drawn while the card is growing (a clip rectangle that changes every
 frame with text inside it makes Qt rebuild its render batches on each one,
 measured at ~4.7 ms of CPU per frame); it fades in once the card is open, so
 the growth is one quad a frame. A card transition costs about 50 ms of CPU.
+
+### The ticker
+
+`StatusbarApp/NotificationTickerModule.qml` is the module beside the media
+slot. It is the one place the shell says *what* a notification is rather than
+only that one exists: the application's icon and the notification's text, on
+one line, rolling sideways when the line is longer than the slot.
+
+|  |  |
+| --- | --- |
+| click | the notification list — or, for a notification that names a file, that file's folder, with the file selected |
+| right click | dismiss this one; the next slides in |
+| wheel | step back and forth through the waiting notifications |
+
+Its slot is a constant width, held whether or not anything is waiting, exactly
+as the media slot is: the bar's width is built from its module groups, so a
+slot that came and went would widen the bar every time something arrived and
+narrow it again when it was dismissed. Nothing in the bar moves for a
+notification — it fades and slides in on the spot, and its text rolls inside
+the room the slot already has. Under Do Not Disturb the slot stays empty:
+notifications still collect and the control centre still counts them, and what
+Do Not Disturb turns off is exactly this sort of asking to be read.
+
+**The width of the bar.** `pill.expandedWidth` is a *minimum*, not a width: the
+pill grows past it whenever its content needs more room, which on a full bar it
+always does, so setting it smaller does nothing. The width of a full bar is the
+width of its modules, and the two adjustable ones are `media.titleWidth` (90)
+and `notifications.tickerWidth` (150) — between them about 2 to 3 words each.
+
+They are also what controls the empty gap beside the centre group. The bar has
+to be symmetric, because the centre group sits on the centre of the screen, so
+each half reserves the *wider* of the two end groups and the narrower one
+floats to its end of the bar with the difference left as empty bar. Trimming
+these two slots until the left group matches the right is what closes that gap;
+nothing else in the bar can. Measured on this machine: at 150/240 the left
+group overran the right by 184px and that much empty bar sat to the right of
+the control centre; at 90/150 the bar is 1367px instead of 1607px and the gap
+is gone.
+
+It does not roll forever. A line rolling costs about 2.4% of a core on this
+machine, against 0.08% for the bar at rest, and a notification that has been
+sitting unread for an hour does not need to keep moving. So it rolls for 40
+seconds after it arrives — twice through a long line, at a constant 34 px/s —
+and then settles back to the beginning. The pointer on it rolls it again, for
+as long as it is there. The width of the slot is `notifications.tickerWidth` in
+`statusbar.json` (default 240).
+
+**The file a notification is about.** Clicking a notification that names a file
+opens that file's folder with the file selected, through
+`org.freedesktop.FileManager1.ShowItems` — the freedesktop interface every file
+manager implements for this, and D-Bus activated, so the file manager does not
+have to be running. The path is percent-encoded into a URI first, which is what
+makes it safe inside the GVariant literal `gdbus` wants. Three ways of naming a
+file, in order of how certain they are:
+
+1. a `file://` URI anywhere in the text;
+2. an absolute path anywhere in the text (the screenshot and wallpaper
+   notifications both carry one);
+3. a finished download, which usually names the file and not the folder: a text
+   matching both *download* and *complete/finished/saved* has its file name
+   taken to be in the download folder (`xdg-user-dir DOWNLOAD`, asked once).
+
+Nothing here touches the disk. A file that has since been moved opens its
+folder with nothing selected, which is still the right folder.
+
+### The list
 
 The list inside is `NotificationApp/NotificationPanel.qml`:
 

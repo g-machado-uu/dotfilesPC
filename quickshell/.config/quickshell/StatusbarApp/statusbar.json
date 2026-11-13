@@ -5,18 +5,18 @@ Default configuration file for the Quickshell Statusbar.
   "bar": {
     "height": 36,
     "reservedHeight": 36,
-    "enabled": false,
+    "enabled": true,
     "alwaysExpanded": true
   },
   "pill": {
     "collapsedWidth": 0,
-    "expandedWidth": 680,
+    "expandedWidth": 600,
     "radius": 18,
     "flareRadius": 18,
     "animationDuration": 350
   },
   "modules": {
-    "left": ["workspaces", "terminal", "media"],
+    "left": ["workspaces", "terminal", "media", "notificationticker"],
     "center": ["launcher", "clock", "calendar", "controlcentre"],
     "right": [
       "updates",
@@ -47,12 +47,16 @@ Default configuration file for the Quickshell Statusbar.
     "showAppIcons": true
   },
   "weather": {
-    "location": "Belfast, UK",
+    "location": "Greenisland",
     "desktopWidget": true,
     "widgetScale": 0.8,
     "showDelay": 600
   },
+  "media": {
+    "titleWidth": 90
+  },
   "notifications": {
-    "spawnDuration": 320
+    "spawnDuration": 320,
+    "tickerWidth": 150
   }
 }
